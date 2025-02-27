@@ -1,0 +1,90 @@
+import 'package:flutter/material.dart';
+import 'package:capstone/screens/recruitment/recruitment_detail_screen.dart';
+
+class CustomTextField extends StatelessWidget {
+  final String labelText;
+  final TextEditingController controller;
+  final bool obscureText;
+
+  const CustomTextField({
+    required this.labelText,
+    required this.controller,
+    this.obscureText = false,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          labelText: labelText,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+}
+
+class CustomButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+
+  const CustomButton({required this.text, required this.onPressed, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(onPressed: onPressed, child: Text(text));
+  }
+}
+
+class RecruitmentScreen extends StatelessWidget {
+  const RecruitmentScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('모집글')),
+      body: FutureBuilder(
+        future: RecruitmentService.getRecruitments(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return CircularProgressIndicator();
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            final recruitments = snapshot.data;
+            return ListView.builder(
+              itemCount: recruitments?.length ?? 0,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(recruitments?[index].title ?? ''),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => RecruitmentDetailScreen(
+                              recruitmentId: recruitments?[index].id ?? 0,
+                            ),
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          }
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // 그룹장만 접근 가능하도록 조건 추가
+          Navigator.pushNamed(context, '/recruitment/create');
+        },
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+}
