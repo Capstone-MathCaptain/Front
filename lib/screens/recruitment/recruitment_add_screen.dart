@@ -48,8 +48,7 @@ class _RecruitmentAddScreenState extends State<RecruitmentAddScreen> {
       return;
     }
 
-    const String apiUrl =
-        'http://localhost:8080/recruitments'; // 모집글 작성 API URL
+    const String apiUrl = 'http://baseUrl/recruitments'; // 모집글 작성 API URL
     final headers = {
       "Content-Type": "application/json",
       "Authorization": "Bearer $accessToken",

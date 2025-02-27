@@ -32,8 +32,9 @@ class GroupDetailPageState extends State<GroupDetailPage> {
             return const Center(child: Text("데이터를 불러오는 중 오류 발생"));
           } else {
             var groupData = snapshot.data!;
-            double weeklyProgress =
-                _calculateWeeklyProgress(groupData['members']);
+            double weeklyProgress = _calculateWeeklyProgress(
+              groupData['members'],
+            );
 
             return Stack(
               children: [
@@ -54,10 +55,7 @@ class GroupDetailPageState extends State<GroupDetailPage> {
                     ),
 
                     const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {},
-                      child: const Text("인증하기"),
-                    ),
+                    ElevatedButton(onPressed: () {}, child: const Text("인증하기")),
 
                     const Spacer(),
 
@@ -78,7 +76,9 @@ class GroupDetailPageState extends State<GroupDetailPage> {
                               const Text(
                                 "1주 목표 달성률",
                                 style: TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 12),
 
@@ -99,7 +99,8 @@ class GroupDetailPageState extends State<GroupDetailPage> {
                                       value: weeklyProgress / 100,
                                       backgroundColor: Colors.transparent,
                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.blue.shade600),
+                                        Colors.blue.shade600,
+                                      ),
                                       minHeight: 25,
                                     ),
                                   ),
@@ -107,9 +108,10 @@ class GroupDetailPageState extends State<GroupDetailPage> {
                                     child: Text(
                                       "${weeklyProgress.toStringAsFixed(1)}% / 100%",
                                       style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -173,7 +175,9 @@ class GroupDetailPageState extends State<GroupDetailPage> {
                       const Text(
                         "그룹원 목록",
                         style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
@@ -204,16 +208,21 @@ class GroupDetailPageState extends State<GroupDetailPage> {
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundColor: Colors.blue.shade100,
-                              child:
-                                  const Icon(Icons.person, color: Colors.blue),
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.blue,
+                              ),
                             ),
                             title: Text(
                               members[index]['name'],
                               style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w500),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                             subtitle: Text(
-                                "주간 목표: ${members[index]['weekly_goal']}일"),
+                              "주간 목표: ${members[index]['weekly_goal']}일",
+                            ),
                           ),
                         ),
                       );

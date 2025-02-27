@@ -28,7 +28,7 @@ class _CommentWidgetState extends State<CommentWidget> {
     });
 
     final url = Uri.parse(
-      'https://api.example.com/recruitment/${widget.recruitmentId}/comments',
+      'http://baseUrl/recruitment/${widget.recruitmentId}/comments',
     );
     try {
       final response = await http.get(url);
@@ -62,7 +62,7 @@ class _CommentWidgetState extends State<CommentWidget> {
     }
 
     final url = Uri.parse(
-      'https://api.example.com/recruitment/${widget.recruitmentId}/comments',
+      'http://baseUrl/recruitment/${widget.recruitmentId}/comments',
     );
     final headers = {'Content-Type': 'application/json'};
     final body = json.encode({'content': content});

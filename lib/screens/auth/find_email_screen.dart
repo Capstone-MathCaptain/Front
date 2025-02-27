@@ -44,19 +44,20 @@ class _FindEmailScreen extends State<FindEmailScreen> {
   void _showEmailDialog(String userEmail) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('이메일 찾기'),
-        content: Text('회원님의 이메일: $userEmail'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // 다이얼로그 닫기
-              Navigator.pop(context); // 로그인 화면으로 돌아가기
-            },
-            child: const Text('확인'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('이메일 찾기'),
+            content: Text('회원님의 이메일: $userEmail'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // 다이얼로그 닫기
+                  Navigator.pop(context); // 로그인 화면으로 돌아가기
+                },
+                child: const Text('확인'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -65,9 +66,7 @@ class _FindEmailScreen extends State<FindEmailScreen> {
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('이메일 찾기'),
-        ),
+        appBar: AppBar(title: const Text('이메일 찾기')),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

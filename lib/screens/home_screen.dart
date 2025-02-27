@@ -56,7 +56,9 @@ class _HomeScreenState extends State<HomeScreen> {
             BottomNavigationBarItem(icon: Icon(Icons.leaderboard), label: '랭킹'),
             BottomNavigationBarItem(icon: Icon(Icons.person_add), label: '모집'),
             BottomNavigationBarItem(
-                icon: Icon(Icons.account_circle), label: '프로필'),
+              icon: Icon(Icons.account_circle),
+              label: '프로필',
+            ),
           ],
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,

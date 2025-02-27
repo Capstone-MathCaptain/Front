@@ -37,8 +37,11 @@ class ApiHelper {
       if (method == 'GET') {
         response = await http.get(uri, headers: headers);
       } else if (method == 'POST') {
-        response =
-            await http.post(uri, headers: headers, body: jsonEncode(body));
+        response = await http.post(
+          uri,
+          headers: headers,
+          body: jsonEncode(body),
+        );
       } else {
         throw Exception("지원되지 않는 HTTP 메서드: $method");
       }
@@ -52,8 +55,11 @@ class ApiHelper {
           if (method == 'GET') {
             response = await http.get(uri, headers: headers);
           } else if (method == 'POST') {
-            response =
-                await http.post(uri, headers: headers, body: jsonEncode(body));
+            response = await http.post(
+              uri,
+              headers: headers,
+              body: jsonEncode(body),
+            );
           }
         }
       }

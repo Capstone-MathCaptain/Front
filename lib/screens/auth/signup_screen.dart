@@ -37,18 +37,24 @@ class _SignupScreenState extends State<SignupScreen> {
     final String confirmPassword = confirmPasswordController.text;
     final String phone = phoneController.text;
 
-    if ([name, nickname, email, password, confirmPassword, phone]
-        .any((field) => field.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('모든 필드를 입력해주세요.')),
-      );
+    if ([
+      name,
+      nickname,
+      email,
+      password,
+      confirmPassword,
+      phone,
+    ].any((field) => field.isEmpty)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('모든 필드를 입력해주세요.')));
       return;
     }
 
     if (password != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('비밀번호가 일치하지 않습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('비밀번호가 일치하지 않습니다.')));
       return;
     }
 
@@ -78,9 +84,7 @@ class _SignupScreenState extends State<SignupScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('회원가입'),
-      ),
+      appBar: AppBar(title: const Text('회원가입')),
       body: SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -97,10 +101,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: screenHeight * 0.1),
-                  CustomTextField(
-                    labelText: '이름',
-                    controller: nameController,
-                  ),
+                  CustomTextField(labelText: '이름', controller: nameController),
                   SizedBox(height: screenHeight * 0.02),
                   CustomTextField(
                     labelText: '닉네임',

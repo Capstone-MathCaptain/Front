@@ -18,14 +18,10 @@ class LoginScreen extends StatelessWidget {
     final TextEditingController passwordController = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('로그인'),
-      ),
+      appBar: AppBar(title: const Text('로그인')),
       body: SingleChildScrollView(
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: screenHeight,
-          ),
+          constraints: BoxConstraints(minHeight: screenHeight),
           child: IntrinsicHeight(
             child: Padding(
               padding: EdgeInsets.symmetric(
@@ -40,6 +36,7 @@ class LoginScreen extends StatelessWidget {
                   CustomTextField(
                     labelText: '아이디',
                     controller: idController,
+                    keyboardType: TextInputType.visiblePassword,
                   ),
                   SizedBox(height: screenHeight * 0.02),
                   // 비밀번호 입력 필드
@@ -51,11 +48,12 @@ class LoginScreen extends StatelessWidget {
                   SizedBox(height: screenHeight * 0.03),
                   // 로그인 버튼
                   ElevatedButton(
-                    onPressed: () => AuthService.login(
-                      context,
-                      idController.text,
-                      passwordController.text,
-                    ),
+                    onPressed:
+                        () => AuthService.login(
+                          context,
+                          idController.text,
+                          passwordController.text,
+                        ),
                     style: ElevatedButton.styleFrom(
                       minimumSize: Size(screenWidth * 0.6, screenHeight * 0.06),
                     ),

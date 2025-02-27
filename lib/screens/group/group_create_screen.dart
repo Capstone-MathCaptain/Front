@@ -46,9 +46,9 @@ class GroupCreatePageState extends State<GroupCreatePage> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("그룹이 성공적으로 생성되었습니다!")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("그룹이 성공적으로 생성되었습니다!")));
         Navigator.pop(context, true);
       } else {
         _showSnackBar("그룹 생성 실패");
@@ -82,9 +82,9 @@ class GroupCreatePageState extends State<GroupCreatePage> {
   /// 스낵바 메시지 표시 함수
   void _showSnackBar(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -109,14 +109,17 @@ class GroupCreatePageState extends State<GroupCreatePage> {
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 decoration: const InputDecoration(labelText: "카테고리"),
-                items: ["STUDY", "FITNESS", "READING"]
-                    .map((category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(category),
-                        ))
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedCategory = value!),
+                items:
+                    ["STUDY", "FITNESS", "READING"]
+                        .map(
+                          (category) => DropdownMenuItem(
+                            value: category,
+                            child: Text(category),
+                          ),
+                        )
+                        .toList(),
+                onChanged:
+                    (value) => setState(() => _selectedCategory = value!),
               ),
               const SizedBox(height: 10),
 
@@ -127,8 +130,8 @@ class GroupCreatePageState extends State<GroupCreatePage> {
                   labelText: "해시태그 입력 (최대 5개)",
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: () =>
-                        _addHashtag(_hashtagsController.text.trim()),
+                    onPressed:
+                        () => _addHashtag(_hashtagsController.text.trim()),
                   ),
                 ),
                 onSubmitted: (value) => _addHashtag(value.trim()),
@@ -138,13 +141,14 @@ class GroupCreatePageState extends State<GroupCreatePage> {
               // 해시태그 표시
               Wrap(
                 spacing: 8.0,
-                children: _hashtags.map((tag) {
-                  return Chip(
-                    label: Text(tag),
-                    deleteIcon: const Icon(Icons.close),
-                    onDeleted: () => _removeHashtag(tag),
-                  );
-                }).toList(),
+                children:
+                    _hashtags.map((tag) {
+                      return Chip(
+                        label: Text(tag),
+                        deleteIcon: const Icon(Icons.close),
+                        onDeleted: () => _removeHashtag(tag),
+                      );
+                    }).toList(),
               ),
               const SizedBox(height: 10),
 
@@ -152,10 +156,15 @@ class GroupCreatePageState extends State<GroupCreatePage> {
               DropdownButtonFormField<int>(
                 value: minDailyHours,
                 decoration: const InputDecoration(labelText: "그룹원 최소 하루 목표 시간"),
-                items: List.generate(12, (index) => index + 1)
-                    .map((hour) =>
-                        DropdownMenuItem(value: hour, child: Text("$hour 시간")))
-                    .toList(),
+                items:
+                    List.generate(12, (index) => index + 1)
+                        .map(
+                          (hour) => DropdownMenuItem(
+                            value: hour,
+                            child: Text("$hour 시간"),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (value) {
                   setState(() {
                     minDailyHours = value!;
@@ -172,11 +181,16 @@ class GroupCreatePageState extends State<GroupCreatePage> {
               DropdownButtonFormField<int>(
                 value: leaderDailyGoal,
                 decoration: const InputDecoration(labelText: "그룹장 최소 하루 목표 시간"),
-                items: List.generate(12, (index) => index + 1)
-                    .where((hour) => hour >= minDailyHours)
-                    .map((hour) =>
-                        DropdownMenuItem(value: hour, child: Text("$hour 시간")))
-                    .toList(),
+                items:
+                    List.generate(12, (index) => index + 1)
+                        .where((hour) => hour >= minDailyHours)
+                        .map(
+                          (hour) => DropdownMenuItem(
+                            value: hour,
+                            child: Text("$hour 시간"),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (value) => setState(() => leaderDailyGoal = value!),
               ),
               const SizedBox(height: 10),
@@ -185,12 +199,15 @@ class GroupCreatePageState extends State<GroupCreatePage> {
               DropdownButtonFormField<int>(
                 value: minWeeklyDays,
                 decoration: const InputDecoration(labelText: "그룹원 최소 주간 목표 일수"),
-                items: List.generate(7, (index) => index + 1)
-                    .map((day) => DropdownMenuItem(
-                          value: day,
-                          child: Text("$day 일"),
-                        ))
-                    .toList(),
+                items:
+                    List.generate(7, (index) => index + 1)
+                        .map(
+                          (day) => DropdownMenuItem(
+                            value: day,
+                            child: Text("$day 일"),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (value) {
                   setState(() {
                     minWeeklyDays = value!;
@@ -207,11 +224,16 @@ class GroupCreatePageState extends State<GroupCreatePage> {
               DropdownButtonFormField<int>(
                 value: leaderWeeklyGoal,
                 decoration: const InputDecoration(labelText: "그룹장 최소 주간 목표 일수"),
-                items: List.generate(7, (index) => index + 1)
-                    .where((day) => day >= minWeeklyDays)
-                    .map((day) =>
-                        DropdownMenuItem(value: day, child: Text("$day 일")))
-                    .toList(),
+                items:
+                    List.generate(7, (index) => index + 1)
+                        .where((day) => day >= minWeeklyDays)
+                        .map(
+                          (day) => DropdownMenuItem(
+                            value: day,
+                            child: Text("$day 일"),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (value) => setState(() => leaderWeeklyGoal = value!),
               ),
               const SizedBox(height: 10),

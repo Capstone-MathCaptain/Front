@@ -10,7 +10,10 @@ class AuthService {
 
   /// ✅ 로그인 요청 (토큰만 저장, userGroups 불러오지 않음)
   static Future<void> login(
-      BuildContext context, String id, String password) async {
+    BuildContext context,
+    String id,
+    String password,
+  ) async {
     if (id.isEmpty || password.isEmpty) {
       _showSnackBar("아이디와 비밀번호를 입력해주세요.");
       return;
@@ -30,9 +33,13 @@ class AuthService {
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
-            'access_token', response.headers['authorization'] ?? "");
+          'access_token',
+          response.headers['authorization'] ?? "",
+        );
         await prefs.setString(
-            'refresh_token', response.headers['authorization-refresh'] ?? "");
+          'refresh_token',
+          response.headers['authorization-refresh'] ?? "",
+        );
 
         log("✅ 로그인 성공");
 
@@ -61,7 +68,8 @@ class AuthService {
 
   /// ✅ 메시지 표시 (BuildContext 없이 사용 가능)
   static void _showSnackBar(String message) {
-    _scaffoldMessengerKey.currentState
-        ?.showSnackBar(SnackBar(content: Text(message)));
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/recruitment_service.dart';
+import 'package:capstone/services/recruitment_service.dart';
 
 class CommentEditWidget extends StatelessWidget {
   final int recruitmentId;
@@ -27,7 +27,9 @@ class CommentEditWidget extends StatelessWidget {
               commentId,
               _contentController.text,
             ).then((_) {
-              Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             });
           },
           child: Text('수정'),

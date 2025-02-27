@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 class RecruitmentService {
   static Future<void> createRecruitment(String title, String content) async {
     final response = await http.post(
-      Uri.parse('https://api.example.com/recruitment/create'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('http://baseUrl/recruitment/create'),
       body: json.encode({'title': title, 'content': content}),
     );
     if (response.statusCode != 200) {
@@ -14,13 +13,12 @@ class RecruitmentService {
   }
 
   static Future<void> updateRecruitment(
-    int recruitmentId,
+    int id,
     String title,
     String content,
   ) async {
     final response = await http.put(
-      Uri.parse('https://api.example.com/recruitment/$recruitmentId'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('http://baseUrl/recruitment/$id'),
       body: json.encode({'title': title, 'content': content}),
     );
     if (response.statusCode != 200) {
@@ -28,9 +26,9 @@ class RecruitmentService {
     }
   }
 
-  static Future<void> deleteRecruitment(int recruitmentId) async {
+  static Future<void> deleteRecruitment(int id) async {
     final response = await http.delete(
-      Uri.parse('https://api.example.com/recruitment/$recruitmentId'),
+      Uri.parse('http://baseUrl/recruitment/$id'),
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to delete recruitment');
@@ -43,9 +41,7 @@ class RecruitmentService {
     String content,
   ) async {
     final response = await http.put(
-      Uri.parse(
-        'https://api.example.com/recruitment/comment/$recruitmentId/$commentId',
-      ),
+      Uri.parse('http://baseUrl/recruitment/comment/$recruitmentId/$commentId'),
       body: json.encode({'content': content}),
     );
     if (response.statusCode != 200) {
@@ -53,25 +49,23 @@ class RecruitmentService {
     }
   }
 
-  static Future getRecruitmentDetail(int recruitmentId) async {
+  static Future<List> getRecruitments() async {
+    final response = await http.get(Uri.parse('http://baseUrl/recruitment'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['data'];
+    } else {
+      throw Exception('Failed to load recruitments');
+    }
+  }
+
+  static Future getRecruitmentDetail(int id) async {
     final response = await http.get(
-      Uri.parse('https://api.example.com/recruitment/$recruitmentId'),
+      Uri.parse('http://baseUrl/recruitment/$id'),
     );
     if (response.statusCode == 200) {
       return json.decode(response.body)['data'];
     } else {
       throw Exception('Failed to load recruitment detail');
-    }
-  }
-
-  static Future<List> getRecruitments() async {
-    final response = await http.get(
-      Uri.parse('https://api.example.com/recruitment'),
-    );
-    if (response.statusCode == 200) {
-      return json.decode(response.body)['data'];
-    } else {
-      throw Exception('Failed to load recruitments');
     }
   }
 }

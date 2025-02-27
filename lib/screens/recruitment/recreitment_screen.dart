@@ -4,14 +4,14 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:capstone/screens/recruitment/recruitment_add_screen.dart';
 
-class RecruitmentScreen extends StatefulWidget {
-  const RecruitmentScreen({super.key});
+class RecruitmentListScreen extends StatefulWidget {
+  const RecruitmentListScreen({super.key});
 
   @override
-  State<RecruitmentScreen> createState() => _RecruitmentScreenState();
+  State<RecruitmentListScreen> createState() => _RecruitmentListScreenState();
 }
 
-class _RecruitmentScreenState extends State<RecruitmentScreen> {
+class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
   List<dynamic> recruitmentPosts = [];
   bool isLoading = true;
 
@@ -37,7 +37,7 @@ class _RecruitmentScreenState extends State<RecruitmentScreen> {
       return;
     }
 
-    final url = Uri.parse("http://localhost:8080/recruitments");
+    final url = Uri.parse("http://baseUrl/recruitments");
     final headers = {
       "Content-Type": "application/json",
       "Authorization": "Bearer $accessToken",

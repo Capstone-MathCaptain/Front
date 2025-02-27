@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:capstone/screens/recruitment/recruitment_detail_screen.dart';
+import 'package:capstone/services/recruitment_service.dart';
 
 class CustomTextField extends StatelessWidget {
   final String labelText;
   final TextEditingController controller;
   final bool obscureText;
+  final TextInputType keyboardType;
 
   const CustomTextField({
     required this.labelText,
     required this.controller,
     this.obscureText = false,
+    this.keyboardType = TextInputType.text,
     super.key,
   });
 
@@ -19,6 +22,7 @@ class CustomTextField extends StatelessWidget {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: labelText,
           border: const OutlineInputBorder(),
@@ -40,8 +44,8 @@ class CustomButton extends StatelessWidget {
   }
 }
 
-class RecruitmentScreen extends StatelessWidget {
-  const RecruitmentScreen({super.key});
+class RecruitmentOverviewWidget extends StatelessWidget {
+  const RecruitmentOverviewWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

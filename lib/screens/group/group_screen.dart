@@ -7,10 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 class GroupPage extends StatefulWidget {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey;
 
-  const GroupPage({
-    super.key,
-    required this.scaffoldMessengerKey,
-  });
+  const GroupPage({super.key, required this.scaffoldMessengerKey});
 
   @override
   GroupPageState createState() => GroupPageState();
@@ -87,30 +84,31 @@ class GroupPageState extends State<GroupPage>
   void _showSearchDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("그룹 검색"),
-        content: TextField(
-          controller: _searchController,
-          decoration: const InputDecoration(hintText: "검색어 입력"),
-          onSubmitted: (query) {
-            Navigator.pop(context);
-            _searchGroups(query);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("취소"),
+      builder:
+          (context) => AlertDialog(
+            title: const Text("그룹 검색"),
+            content: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(hintText: "검색어 입력"),
+              onSubmitted: (query) {
+                Navigator.pop(context);
+                _searchGroups(query);
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("취소"),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _searchGroups(_searchController.text);
+                },
+                child: const Text("검색"),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _searchGroups(_searchController.text);
-            },
-            child: const Text("검색"),
-          ),
-        ],
-      ),
     );
   }
 
@@ -123,8 +121,9 @@ class GroupPageState extends State<GroupPage>
     });
 
     try {
-      final List<dynamic> searchResults =
-          await GroupService.searchGroups(query: query);
+      final List<dynamic> searchResults = await GroupService.searchGroups(
+        query: query,
+      );
       if (!mounted) return;
       setState(() {
         _userGroups = searchResults;
@@ -154,58 +153,58 @@ class GroupPageState extends State<GroupPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("내 그룹"),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _userGroups.isNotEmpty
+      appBar: AppBar(title: const Text("내 그룹")),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _userGroups.isNotEmpty
               ? ListView.builder(
-                  itemCount: _userGroups.length,
-                  itemBuilder: (context, index) {
-                    final group = _userGroups[index];
+                itemCount: _userGroups.length,
+                itemBuilder: (context, index) {
+                  final group = _userGroups[index];
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        group['groupName'] ?? "알 수 없는 그룹",
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      child: ListTile(
-                        title: Text(
-                          group['groupName'] ?? "알 수 없는 그룹",
-                          style: GoogleFonts.notoSansKr(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("리더: ${group['leaderName'] ?? '알 수 없음'}"),
-                            Text("카테고리: ${group['category'] ?? '알 수 없음'}"),
-                            Text("그룹 포인트: ${group['groupPoint'] ?? 0}"),
-                            if (group['hashtags'] != null &&
-                                group['hashtags'] is List &&
-                                (group['hashtags'] as List).isNotEmpty)
-                              Text(
-                                "해시태그: ${(group['hashtags'] as List).join(', ')}",
-                              ),
-                          ],
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  GroupDetailPage(groupId: group['groupId']),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("리더: ${group['leaderName'] ?? '알 수 없음'}"),
+                          Text("카테고리: ${group['category'] ?? '알 수 없음'}"),
+                          Text("그룹 포인트: ${group['groupPoint'] ?? 0}"),
+                          if (group['hashtags'] != null &&
+                              group['hashtags'] is List &&
+                              (group['hashtags'] as List).isNotEmpty)
+                            Text(
+                              "해시태그: ${(group['hashtags'] as List).join(', ')}",
                             ),
-                          );
-                        },
+                        ],
                       ),
-                    );
-                  },
-                )
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    GroupDetailPage(groupId: group['groupId']),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              )
               : const Center(child: Text("가입된 그룹이 없습니다.")),
       floatingActionButton: SizedBox(
         width: 60, // FAB 펼쳤을 때 필요한 너비

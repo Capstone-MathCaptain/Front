@@ -29,9 +29,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: "Capstone",
-      theme: ThemeData(
-        primaryColor: Colors.blue,
-      ),
+      theme: ThemeData(primaryColor: Colors.blue),
       home: const SplashScreen(),
     );
   }
@@ -61,9 +59,7 @@ class _SplashScreenState extends State<SplashScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => HomeScreen()),
           );
         }
       } catch (e) {
@@ -83,10 +79,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

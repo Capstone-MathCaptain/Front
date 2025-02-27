@@ -52,9 +52,7 @@ class _FindPasswordScreenState extends State<FindPasswordScreen> {
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey, // ✅ ScaffoldMessenger 적용
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('비밀번호 찾기'),
-        ),
+        appBar: AppBar(title: const Text('비밀번호 찾기')),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

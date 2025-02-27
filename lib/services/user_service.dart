@@ -9,10 +9,7 @@ class UserService {
       final response = await ApiHelper.sendRequest(
         endpoint: "/user/find/email",
         method: "POST",
-        body: {
-          "userName": name,
-          "phoneNumber": phone,
-        },
+        body: {"userName": name, "phoneNumber": phone},
         includeToken: false, // 🔹 로그인 없이 사용 가능
       );
 
@@ -36,10 +33,7 @@ class UserService {
       final response = await ApiHelper.sendRequest(
         endpoint: "/user/find/password",
         method: "POST",
-        body: {
-          "name": name,
-          "email": email,
-        },
+        body: {"name": name, "email": email},
         includeToken: false, // 🔹 로그인 없이 사용 가능
       );
 

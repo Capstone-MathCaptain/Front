@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 Future<Map<String, dynamic>> fetchGroupDetails(int groupId) async {
-  final response =
-      await http.get(Uri.parse('http://localhost:8080/group/$groupId'));
+  final response = await http.get(Uri.parse('http://baseUrl/group/$groupId'));
 
   if (response.statusCode == 200) {
     return json.decode(response.body);
@@ -19,7 +18,7 @@ Future<Map<String, dynamic>> fetchGroupDetails(int groupId) async {
   //   "leaderName": "Alice",
   //   "group_point": 120,
   //   "group_rank": 1,
-  //   "group_image_url": "https://example.com/image1.png",
+  //   "group_image_url": "http://example.com/image1.png",
   //   "members": [
   //     {
   //       "name": "Alice",
