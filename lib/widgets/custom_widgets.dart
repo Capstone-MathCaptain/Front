@@ -7,12 +7,14 @@ class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final bool obscureText;
   final TextInputType keyboardType;
+  final void Function(String)? onSubmitted;
 
   const CustomTextField({
     required this.labelText,
     required this.controller,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.onSubmitted, // ✅ 생성자에 추가
     super.key,
   });
 
@@ -27,6 +29,7 @@ class CustomTextField extends StatelessWidget {
           labelText: labelText,
           border: const OutlineInputBorder(),
         ),
+        onSubmitted: onSubmitted, // ✅ onSubmitted 추가
       ),
     );
   }
@@ -71,7 +74,8 @@ class RecruitmentOverviewWidget extends StatelessWidget {
                       MaterialPageRoute(
                         builder:
                             (context) => RecruitmentDetailScreen(
-                              recruitmentId: recruitments?[index].id ?? 0,
+                              recruitmentId:
+                                  recruitments?[index].recruitmentId ?? 0,
                             ),
                       ),
                     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:capstone/services/api_helper.dart';
 
 class RecruitmentAddScreen extends StatefulWidget {
   const RecruitmentAddScreen({super.key});
@@ -48,7 +49,7 @@ class _RecruitmentAddScreenState extends State<RecruitmentAddScreen> {
       return;
     }
 
-    const String apiUrl = 'http://baseUrl/recruitments'; // 모집글 작성 API URL
+    const String apiUrl = '${ApiHelper.baseUrl}/recruitments';
     final headers = {
       "Content-Type": "application/json",
       "Authorization": "Bearer $accessToken",

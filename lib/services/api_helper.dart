@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:developer'; // 로그 프레임워크 사용
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 
 class ApiHelper {
-  static const String baseUrl = "http://localhost:8080";
+  static const String baseUrl = "http://192.168.87.178:8080";
   static const String refreshUrl = "$baseUrl/refresh-token"; // 액세스 토큰 갱신 엔드포인트
 
   /// ✅ 액세스 토큰 가져오기
@@ -18,95 +20,183 @@ class ApiHelper {
     required String endpoint,
     required String method,
     Map<String, dynamic>? body,
-    bool includeToken = true, // 🔹 기본값을 true로 설정
+    bool includeToken = true,
   }) async {
-    String? accessToken = includeToken ? await _getAccessToken() : null;
+    log('🔄 API 요청 시작: $method $endpoint');
 
+    // 토큰 유효성 확인 및 갱신
+    if (includeToken) {
+      await checkAndRefreshToken();
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    final uri = Uri.parse('$baseUrl$endpoint');
     final headers = {
-      "Content-Type": "application/json",
-      if (includeToken && accessToken != null)
-        "Authorization": "Bearer $accessToken",
+      'Content-Type': 'application/json',
+      if (includeToken && token != null) 'Authorization': 'Bearer $token',
     };
 
-    final uri = Uri.parse("$baseUrl$endpoint");
+    log('🔗 요청 URL: $uri');
+    log('🔑 헤더: $headers');
+    if (body != null) {
+      log('📦 요청 본문: ${json.encode(body)}');
+    }
+
     http.Response response;
-    log("🚀 요청 URL: $uri");
-    log("📌 요청 헤더: $headers");
-    log("📌 요청 바디: ${jsonEncode(body)}");
+
     try {
-      if (method == 'GET') {
-        response = await http.get(uri, headers: headers);
-      } else if (method == 'POST') {
-        response = await http.post(
-          uri,
-          headers: headers,
-          body: jsonEncode(body),
-        );
-      } else {
-        throw Exception("지원되지 않는 HTTP 메서드: $method");
+      switch (method.toUpperCase()) {
+        case 'GET':
+          response = await http.get(uri, headers: headers);
+          break;
+        case 'POST':
+          response = await http.post(
+            uri,
+            headers: headers,
+            body: body != null ? json.encode(body) : null,
+          );
+          break;
+        case 'PUT':
+          response = await http.put(
+            uri,
+            headers: headers,
+            body: body != null ? json.encode(body) : null,
+          );
+          break;
+        case 'DELETE':
+          response = await http.delete(
+            uri,
+            headers: headers,
+            body: body != null ? json.encode(body) : null,
+          );
+          break;
+        default:
+          throw Exception('지원하지 않는 HTTP 메서드: $method');
       }
 
-      if (includeToken && response.statusCode == 401) {
-        log("401 오류 발생 - 토큰 갱신 시도");
-        String? newAccessToken = await _refreshAccessToken();
-        if (newAccessToken != null) {
-          headers["Authorization"] = "Bearer $newAccessToken";
+      log('📥 응답 상태 코드: ${response.statusCode}');
 
-          if (method == 'GET') {
-            response = await http.get(uri, headers: headers);
-          } else if (method == 'POST') {
-            response = await http.post(
-              uri,
-              headers: headers,
-              body: jsonEncode(body),
-            );
-          }
+      // 응답 로깅 (응답 크기가 큰 경우 일부만 로깅)
+      if (response.bodyBytes.length > 1000) {
+        final preview = utf8.decode(response.bodyBytes.sublist(0, 1000));
+        log(
+          '📥 응답 본문 (처음 1000바이트): $preview... (총 ${response.bodyBytes.length} 바이트)',
+        );
+      } else {
+        try {
+          final decodedBody = utf8.decode(response.bodyBytes);
+          log('📥 응답 본문: $decodedBody');
+        } catch (e) {
+          log('📥 응답 본문 디코딩 실패: $e');
         }
       }
 
       return response;
     } catch (e) {
-      log("네트워크 오류 발생: $e", error: e);
-      throw Exception("네트워크 오류 발생: $e");
+      log('❌ HTTP 요청 실패: $e');
+      rethrow;
     }
   }
 
-  /// ✅ 액세스 토큰 갱신
   static Future<String?> _refreshAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
-    String? accessToken = prefs.getString("access_token");
     String? refreshToken = prefs.getString("refresh_token");
 
-    if (accessToken == null || refreshToken == null) {
-      log("토큰이 존재하지 않음 - 로그인 필요");
+    if (refreshToken == null) {
       return null;
     }
 
+    var headers = {
+      "Content-Type": "application/json",
+      "Authorization-refresh": "Bearer $refreshToken",
+    };
+
     try {
-      final response = await http.post(
-        Uri.parse(refreshUrl),
+      final response = await http.get(Uri.parse(refreshUrl), headers: headers);
+
+      if (response.statusCode == 200) {
+        final responseData = response.headers['authorization'];
+        String? newAccessToken = responseData;
+
+        if (newAccessToken != null) {
+          await prefs.setString("access_token", newAccessToken);
+          return newAccessToken;
+        }
+      }
+    } catch (e) {}
+
+    return null;
+  }
+
+  static Future<bool> checkAndRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? refreshToken = prefs.getString("refresh_token");
+
+    if (refreshToken == null) {
+      return false;
+    }
+
+    try {
+      final url = Uri.parse("$baseUrl/auth/refresh");
+      final headers = {
+        "Content-Type": "application/json",
+        "Authorization-refresh": "Bearer $refreshToken",
+      };
+
+      final response = await http.post(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final newToken = response.headers['authorization'];
+        if (newToken != null) {
+          await prefs.setString("access_token", newToken);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> get(String endpoint) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $accessToken",
-          "Authorization-refresh": "Bearer $refreshToken",
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
         },
       );
 
       if (response.statusCode == 200) {
-        String? newAccessToken = response.headers['authorization'];
-
-        if (newAccessToken != null) {
-          await prefs.setString("access_token", newAccessToken);
-          log("새로운 액세스 토큰 저장 완료");
-          return newAccessToken;
+        return json.decode(response.body);
+      } else if (response.statusCode == 401) {
+        bool refreshed = await checkAndRefreshToken();
+        if (refreshed) {
+          final newAccessToken = prefs.getString('access_token');
+          final retryResponse = await http.get(
+            Uri.parse('$baseUrl$endpoint'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (newAccessToken != null)
+                'Authorization': 'Bearer $newAccessToken',
+            },
+          );
+          if (retryResponse.statusCode == 200) {
+            return json.decode(retryResponse.body);
+          }
         }
+        throw Exception('Authentication failed: ${response.statusCode}');
       } else {
-        log("토큰 갱신 실패: ${response.statusCode}");
+        throw Exception('Failed to load data: ${response.statusCode}');
       }
     } catch (e) {
-      log("토큰 갱신 요청 중 오류 발생: $e", error: e);
+      rethrow;
     }
-
-    return null;
   }
 }

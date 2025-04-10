@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:capstone/services/api_helper.dart';
 
 class CommentWidget extends StatefulWidget {
   final int recruitmentId;
@@ -28,7 +29,7 @@ class _CommentWidgetState extends State<CommentWidget> {
     });
 
     final url = Uri.parse(
-      'http://baseUrl/recruitment/${widget.recruitmentId}/comments',
+      '${ApiHelper.baseUrl}/recruitment/${widget.recruitmentId}/comments',
     );
     try {
       final response = await http.get(url);
@@ -62,7 +63,7 @@ class _CommentWidgetState extends State<CommentWidget> {
     }
 
     final url = Uri.parse(
-      'http://baseUrl/recruitment/${widget.recruitmentId}/comments',
+      '${ApiHelper.baseUrl}/recruitment/${widget.recruitmentId}/comments',
     );
     final headers = {'Content-Type': 'application/json'};
     final body = json.encode({'content': content});

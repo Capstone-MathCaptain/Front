@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:capstone/services/api_services.dart';
+import 'dart:developer' as developer;
 
 class GroupDetailPage extends StatefulWidget {
   final int groupId;
@@ -17,6 +18,7 @@ class GroupDetailPageState extends State<GroupDetailPage> {
   @override
   void initState() {
     super.initState();
+    developer.log('GroupDetailPage initState 호출: groupId=${widget.groupId}');
     _groupDetails = fetchGroupDetails(widget.groupId);
   }
 

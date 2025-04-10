@@ -1,4 +1,7 @@
 import 'package:capstone/screens/group/group_screen.dart';
+import 'package:capstone/screens/recruitment/recruitment_screen.dart';
+import 'package:capstone/screens/ranking/ranking_screen.dart';
+import 'package:capstone/screens/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -42,9 +45,9 @@ class _HomeScreenState extends State<HomeScreen> {
               key: _groupPageKey,
               scaffoldMessengerKey: _scaffoldMessengerKey,
             ),
-            const Center(child: Text("랭킹 페이지(미구현)")),
-            const Center(child: Text("모집 페이지(미구현)")),
-            const Center(child: Text("프로필 페이지(미구현)")),
+            const RankingScreen(),
+            const RecruitmentListScreen(),
+            const ProfileScreen(),
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(

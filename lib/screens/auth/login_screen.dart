@@ -37,6 +37,12 @@ class LoginScreen extends StatelessWidget {
                     labelText: '아이디',
                     controller: idController,
                     keyboardType: TextInputType.visiblePassword,
+                    onSubmitted:
+                        (_) => AuthService.login(
+                          context,
+                          idController.text,
+                          passwordController.text,
+                        ),
                   ),
                   SizedBox(height: screenHeight * 0.02),
                   // 비밀번호 입력 필드
@@ -44,6 +50,12 @@ class LoginScreen extends StatelessWidget {
                     labelText: '비밀번호',
                     controller: passwordController,
                     obscureText: true,
+                    onSubmitted:
+                        (_) => AuthService.login(
+                          context,
+                          idController.text,
+                          passwordController.text,
+                        ),
                   ),
                   SizedBox(height: screenHeight * 0.03),
                   // 로그인 버튼

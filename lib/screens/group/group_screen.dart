@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:capstone/screens/group/group_create_screen.dart';
 import 'package:capstone/services/group_service.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:capstone/models/group.dart';
+import 'dart:developer' as developer;
 
 class GroupPage extends StatefulWidget {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey;
@@ -15,9 +17,10 @@ class GroupPage extends StatefulWidget {
 
 class GroupPageState extends State<GroupPage>
     with SingleTickerProviderStateMixin {
-  List<dynamic> _userGroups = [];
+  List<Group> _userGroups = [];
   bool _isLoading = false;
   bool _isFabExpanded = false;
+  String _errorMessage = '';
 
   late AnimationController _animationController;
   final TextEditingController _searchController = TextEditingController();
@@ -55,28 +58,45 @@ class GroupPageState extends State<GroupPage>
 
   /// 그룹 목록 불러오기
   Future<void> fetchUserGroups() async {
+    developer.log('🔄 fetchUserGroups 메서드 호출됨');
     if (!mounted) return;
     setState(() {
       _isLoading = true;
+      _errorMessage = '';
     });
 
     try {
-      final List<dynamic> groups = await GroupService.fetchUserGroups();
+      final groups = await GroupService.getUserGroups();
+      developer.log('📊 그룹 데이터 받음: ${groups.length}개 그룹');
+
+      // 각 그룹에 대한 상세 정보를 로깅
+      for (var group in groups) {
+        developer.log(
+          '그룹 정보: ID=${group.groupId}, 이름=${group.groupName}, 카테고리=${group.category}, 해시태그=${group.hashtags}',
+        );
+      }
+
+      developer.log(
+        '📋 그룹 목록 요약: ${groups.map((g) => '${g.groupId}:${g.groupName}').toList()}',
+      );
+
       if (!mounted) return;
       setState(() {
         _userGroups = groups;
+        _isLoading = false;
       });
+
       if (_userGroups.isEmpty) {
+        developer.log('⚠️ 사용자 그룹이 없음');
         _showSnackBar("가입된 그룹이 없습니다.");
       }
     } catch (e) {
-      _showSnackBar("그룹 정보를 불러오지 못했습니다: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      developer.log('❌ 그룹 데이터 로딩 오류: $e', error: e);
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '그룹 정보를 불러오는데 실패했습니다: $e';
+      });
+      _showSnackBar("그룹 정보를 불러오는데 실패했습니다: $e");
     }
   }
 
@@ -126,7 +146,7 @@ class GroupPageState extends State<GroupPage>
       );
       if (!mounted) return;
       setState(() {
-        _userGroups = searchResults;
+        _userGroups = searchResults.map((e) => Group.fromJson(e)).toList();
       });
 
       if (_userGroups.isEmpty) {
@@ -163,46 +183,7 @@ class GroupPageState extends State<GroupPage>
                 itemBuilder: (context, index) {
                   final group = _userGroups[index];
 
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        group['groupName'] ?? "알 수 없는 그룹",
-                        style: GoogleFonts.notoSansKr(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("리더: ${group['leaderName'] ?? '알 수 없음'}"),
-                          Text("카테고리: ${group['category'] ?? '알 수 없음'}"),
-                          Text("그룹 포인트: ${group['groupPoint'] ?? 0}"),
-                          if (group['hashtags'] != null &&
-                              group['hashtags'] is List &&
-                              (group['hashtags'] as List).isNotEmpty)
-                            Text(
-                              "해시태그: ${(group['hashtags'] as List).join(', ')}",
-                            ),
-                        ],
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    GroupDetailPage(groupId: group['groupId']),
-                          ),
-                        );
-                      },
-                    ),
-                  );
+                  return _buildGroupCard(group);
                 },
               )
               : const Center(child: Text("가입된 그룹이 없습니다.")),
@@ -290,6 +271,50 @@ class GroupPageState extends State<GroupPage>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupCard(Group group) {
+    // 그룹 카드가 빌드될 때 로그 추가
+    developer.log(
+      '그룹 카드 빌드: ID=${group.groupId}, 이름=${group.groupName}, 카테고리=${group.category}',
+    );
+
+    return InkWell(
+      onTap: () {
+        // 그룹이 선택되었을 때 로그 추가
+        developer.log('그룹 선택됨: ID=${group.groupId}, 이름=${group.groupName}');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GroupDetailPage(groupId: group.groupId),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 2,
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                group.groupName,
+                style: GoogleFonts.notoSansKr(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text("카테고리: ${group.category}"),
+              const SizedBox(height: 4),
+              if (group.hashtags.isNotEmpty)
+                Text("해시태그: ${group.hashtags.join(', ')}"),
+            ],
+          ),
         ),
       ),
     );
