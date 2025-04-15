@@ -33,7 +33,7 @@ class GroupCreatePageState extends State<GroupCreatePage> {
     }
 
     try {
-      int? groupId = await GroupService.createGroup(
+      bool success = await GroupService.createGroup(
         groupName: _groupNameController.text.trim(),
         category: _selectedCategory,
         minDailyHours: minDailyHours,
@@ -45,8 +45,8 @@ class GroupCreatePageState extends State<GroupCreatePage> {
 
       if (!mounted) return;
 
-      if (groupId != null) {
-        _showSnackBar("그룹이 성공적으로 생성되었습니다! (ID: $groupId)");
+      if (success) {
+        _showSnackBar("그룹이 성공적으로 생성되었습니다! (ID: $success)");
         Navigator.pop(context, true);
       } else {
         _showSnackBar("그룹 생성 실패");

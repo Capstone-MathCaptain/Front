@@ -1,9 +1,9 @@
-import 'package:capstone/screens/auth/find_password_screen.dart';
+import 'package:capstone/screens/user/find_password_screen.dart';
 import 'package:capstone/services/auth_service.dart';
 import 'package:capstone/widgets/custom_widgets.dart';
 import 'package:flutter/material.dart';
-import 'package:capstone/screens/auth/signup_screen.dart';
-import 'package:capstone/screens/auth/find_email_screen.dart';
+import 'package:capstone/screens/user/signup_screen.dart';
+import 'package:capstone/screens/user/find_email_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});

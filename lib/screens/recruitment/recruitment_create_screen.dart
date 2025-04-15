@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:capstone/services/recruitment_service.dart';
-import 'package:capstone/services/user_service.dart';
-import 'package:capstone/models/user.dart';
-import 'package:capstone/services/api_helper.dart';
 import 'dart:developer';
 
 class RecruitmentCreateScreen extends StatefulWidget {
@@ -18,131 +15,72 @@ class _RecruitmentCreateScreenState extends State<RecruitmentCreateScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   bool _isSubmitting = false;
-  User? _currentUser;
   List<Map<String, dynamic>> _leaderGroups = [];
   Map<String, dynamic>? _selectedGroup;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _fetchLeaderGroups();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _fetchLeaderGroups() async {
     try {
+      final response = await RecruitmentService.requestCreateRecruitment();
       setState(() {
-        _isSubmitting = true; // 로딩 중 표시
+        _leaderGroups = response['data'];
       });
-
-      log('🔄 모집글 작성 화면 - 데이터 로드 시작');
-
-      // 토큰 갱신 시도
-      await ApiHelper.checkAndRefreshToken();
-      log('✅ 토큰 갱신 완료');
-
-      final user = await UserService.getCurrentUser();
-      if (user == null) {
-        log('⚠️ 사용자 정보 없음 - 로그인 필요');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('로그인 정보를 가져올 수 없습니다. 다시 로그인해주세요.')),
-          );
-          Navigator.pop(context);
-        }
-        return;
-      }
-
-      log(
-        '👤 현재 사용자: ${user.nickname} (ID: ${user.userId}), 전체 정보: ${user.toJson()}',
-      );
-
-      log('📋 리더 그룹 조회 시작');
-      final groups = await RecruitmentService.getLeaderGroups();
-      log('📋 리더 그룹 조회 결과: ${groups.length}개');
-
-      if (groups.isEmpty) {
-        log('⚠️ 리더 그룹이 없습니다.');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('리더로 있는 그룹이 없습니다. 그룹을 생성한 후 모집글을 작성해주세요.'),
-            ),
-          );
-        }
-      } else {
-        log('📋 리더 그룹 목록:');
-        for (int i = 0; i < groups.length; i++) {
-          log(
-            '  ${i + 1}. ${groups[i]['groupName']} (ID: ${groups[i]['groupId']})',
-          );
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _currentUser = user;
-          _leaderGroups = groups;
-          _isSubmitting = false; // 로딩 완료
-
-          // 그룹이 하나만 있으면 자동 선택
-          if (_leaderGroups.length == 1) {
-            _selectedGroup = _leaderGroups.first;
-            log('✅ 그룹 자동 선택: ${_selectedGroup?['groupName']}');
-          }
-        });
-      }
     } catch (e) {
-      log('❌ 데이터 로드 오류: $e');
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('데이터 로드 실패: $e')));
-      }
+      log("리더 그룹 정보를 불러오는데 실패했습니다: $e");
     }
   }
 
   Future<void> _submitRecruitment() async {
-    if (!_formKey.currentState!.validate() || _selectedGroup == null) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isSubmitting = true;
     });
 
     try {
-      final recruitmentId = await RecruitmentService.createRecruitment(
-        recruitGroupId: _selectedGroup!['groupId'],
+      final recruitGroupId = _selectedGroup?['groupId'];
+      if (recruitGroupId == null) {
+        throw Exception("그룹을 선택해주세요.");
+      }
+
+      final success = await RecruitmentService.createRecruitment(
+        recruitGroupId: recruitGroupId,
         title: _titleController.text,
         content: _contentController.text,
-        authorName: _currentUser?.nickname ?? '',
-        authorUid: _currentUser?.email ?? '',
-        authorId: _currentUser?.userId ?? 0,
-        category: _selectedGroup!['category'] ?? 'STUDY',
-        recruitGroupName: _selectedGroup!['groupName'] ?? '',
-        recruitmentStatus: 'RECRUITING',
       );
 
-      if (recruitmentId != null && mounted) {
-        Navigator.pop(context, true);
+      if (success) {
+        log('모집글 등록 성공');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('모집글이 등록되었습니다.')));
+          Navigator.pop(context, true);
+        }
       } else {
-        throw Exception('모집글 작성 실패');
+        log('모집글 등록 실패');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('모집글 등록에 실패했습니다.')));
+        }
       }
     } catch (e) {
+      log('모집글 등록 중 오류 발생: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('모집글 작성 실패: $e')));
+        ).showSnackBar(SnackBar(content: Text('오류가 발생했습니다: $e')));
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
 

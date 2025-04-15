@@ -3,11 +3,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:developer';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:capstone/services/api_helper.dart';
-import 'package:intl/intl.dart';
-import 'package:capstone/screens/recruitment/recruitment_edit_screen.dart';
 import 'package:capstone/services/recruitment_service.dart';
-import 'package:capstone/models/recruitment.dart';
+import 'package:capstone/services/user_service.dart';
+import 'package:intl/intl.dart';
 
 class RecruitmentDetailScreen extends StatefulWidget {
   final int recruitmentId;
@@ -25,8 +23,12 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
   TextEditingController _commentController = TextEditingController();
   TextEditingController _editCommentController = TextEditingController();
   bool isAuthor = false;
-  String? currentUserId;
-  String? nickname;
+  String? userName;
+  String? userNickname;
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _statusController = TextEditingController();
 
   @override
   void initState() {
@@ -48,84 +50,189 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
   }
 
   Future<void> _fetchRecruitmentDetail() async {
-    if (!mounted) return;
-
-    setState(() {
-      isLoading = true;
-    });
-
     try {
-      log('📋 모집글 상세 조회 시작 - 모집글ID: ${widget.recruitmentId}');
-
-      // 사용자 정보 가져오기
-      final prefs = await SharedPreferences.getInstance();
-      final accessToken = prefs.getString('access_token');
-      final userId = prefs.getInt('userId');
-      final userNickname = prefs.getString('nickname');
-
-      log('👤 현재 사용자 정보: userId=$userId, nickname=$userNickname');
-
-      if (accessToken == null) {
-        _showSnackBar("로그인이 필요합니다");
-        setState(() {
-          isLoading = false;
-        });
-        return;
-      }
-
-      // 그룹 ID로 매핑된 모집글 ID 확인
-      final groupMappingKey = 'group_id_mapping_${widget.recruitmentId}';
-      final mappedRecruitmentId = prefs.getInt(groupMappingKey);
-
-      log(
-        '🔄 그룹ID로 모집글 조회 시도 - 그룹ID: ${widget.recruitmentId}, 매핑된 모집글ID: $mappedRecruitmentId',
+      final response = await RecruitmentService.fetchDetailRecruitments(
+        widget.recruitmentId,
       );
-
-      // 매핑된 모집글 ID가 있으면 사용, 없으면 받은 ID 그대로 사용
-      final idToUse = mappedRecruitmentId ?? widget.recruitmentId;
-      log(
-        '🔍 최종 사용 ID: $idToUse (${mappedRecruitmentId != null ? "그룹ID 매핑에서 찾음" : "원본 ID 사용"})',
-      );
-
-      // RecruitmentService를 통해 모집글 상세 정보 조회
-      final recruitmentData = await RecruitmentService.getRecruitmentDetail(
-        idToUse,
-      );
-
-      if (recruitmentData != null) {
-        log('✅ 모집글 상세 조회 성공: ${recruitmentData['title']}');
-        log('📊 모집글 상세 정보 - 그룹ID: ${recruitmentData['recruitGroupId']}');
-
-        // 현재 사용자가 작성자인지 확인 (닉네임 또는 ID로 비교)
-        final authorName = recruitmentData['authorName'] ?? '';
-        final isAuthorByNickname =
-            userNickname != null && authorName == userNickname;
-
-        setState(() {
-          recruitmentDetail = recruitmentData;
-          isLoading = false;
-          isAuthor = isAuthorByNickname;
-          currentUserId = userId?.toString();
-          nickname = userNickname;
-
-          log(
-            '🔍 작성자 여부 확인: 모집글 작성자="$authorName", 현재 사용자 닉네임="$userNickname", 일치=$isAuthorByNickname',
-          );
-        });
-      } else {
-        log('❌ 모집글 상세 조회 실패');
-        setState(() {
-          isLoading = false;
-        });
-        _showSnackBar("존재하지 않는 모집글입니다");
-      }
+      setState(() {
+        recruitmentDetail = response['data'];
+        isLoading = false;
+      });
+      await _fetchUserInfo();
     } catch (e) {
-      log("❌ 모집글 상세 조회 오류: $e", error: e);
+      log("모집글 정보를 불러오는데 실패했습니다: $e");
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchUserInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('userId');
+
+      if (userId == null) {
+        log("userId를 불러오는데 실패했습니다.");
+        return;
+      }
+
+      final userInfo = await UserService.getUserInfo(userId: userId);
+      userName = userInfo['name'];
+      userNickname = userInfo['nickname'];
+
+      setState(() {
+        isAuthor =
+            recruitmentDetail['authorName'] == userName ||
+            recruitmentDetail['authorName'] == userNickname;
+      });
+    } catch (e) {
+      log("작성자 확인 중 오류 발생: $e");
+    }
+  }
+
+  Future<void> _updateRecruitment(
+    String title,
+    String content,
+    String category,
+    String recruitmentStatus,
+  ) async {
+    try {
+      final success = await RecruitmentService.updateRecruitment(
+        recruitmentId: widget.recruitmentId,
+        authorId: recruitmentDetail['authorId'],
+        recruitGroupId: recruitmentDetail['recruitGroupId'],
+        title: title,
+        content: content,
+        recruitmentStatus: recruitmentStatus,
+      );
+
+      if (success) {
+        _showSnackBar("모집글이 수정되었습니다.");
+        _fetchRecruitmentDetail();
+      } else {
+        _showSnackBar("모집글 수정에 실패했습니다.");
+      }
+    } catch (e) {
       _showSnackBar("네트워크 오류 발생: $e");
     }
+  }
+
+  Future<void> _deleteRecruitment() async {
+    try {
+      final bool result = await RecruitmentService.deleteRecruitment(
+        recruitmentId: widget.recruitmentId,
+      );
+
+      if (result) {
+        log("✅ 모집글 삭제 성공");
+        _showSnackBar("모집글이 삭제되었습니다.");
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      } else {
+        log("❌ 모집글 삭제 실패");
+        _showSnackBar("모집글 삭제에 실패했습니다.");
+      }
+    } catch (e) {
+      log("❌ 네트워크 오류: $e", error: e);
+      _showSnackBar("네트워크 오류 발생: $e");
+    }
+  }
+
+  void _showEditRecruitmentDialog() {
+    _titleController.text = recruitmentDetail['title'] ?? '변경할 제목을 입력하시오.';
+    _contentController.text = recruitmentDetail['content'] ?? '변경할 내용을 입력하시오.';
+    _categoryController.text = recruitmentDetail['category'] ?? 'STUDY';
+    _statusController.text = recruitmentDetail['recruitmentStatus'] ?? '모집중';
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('모집글 수정'),
+            content: SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    decoration: const InputDecoration(
+                      labelText: '제목',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _contentController,
+                    decoration: const InputDecoration(
+                      labelText: '내용',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 5,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _categoryController,
+                    decoration: const InputDecoration(
+                      labelText: '카테고리',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _statusController,
+                    decoration: const InputDecoration(
+                      labelText: '상태',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _updateRecruitment(
+                    _titleController.text,
+                    _contentController.text,
+                    _categoryController.text,
+                    _statusController.text,
+                  );
+                },
+                child: const Text('수정'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showDeleteRecruitmentConfirmDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('모집글 삭제'),
+            content: const Text('모집글을 삭제하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('아니오'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _deleteRecruitment();
+                },
+                child: const Text('예', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+    );
   }
 
   Future<void> _postComment() async {
@@ -136,8 +243,8 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
 
     try {
       await RecruitmentService.createComment(
-        widget.recruitmentId,
-        _commentController.text,
+        recruitmentId: widget.recruitmentId,
+        content: _commentController.text,
       );
       _commentController.clear();
       _showSnackBar("댓글이 등록되었습니다.");
@@ -153,36 +260,23 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
       return;
     }
 
-    if (content.length > 300) {
-      _showSnackBar("댓글은 최대 300자까지 입력 가능합니다.");
+    if (content.length > 1000) {
+      _showSnackBar("댓글은 최대 1000자까지 입력 가능합니다.");
       return;
     }
-
-    final prefs = await SharedPreferences.getInstance();
-    final String? accessToken = prefs.getString("access_token");
-
-    if (accessToken == null) {
-      _showSnackBar("로그인이 필요합니다.");
-      return;
-    }
-
-    final url = Uri.parse(
-      "${ApiHelper.baseUrl}/recruitment/comment/${widget.recruitmentId}/$commentId",
-    );
-    final headers = {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer $accessToken",
-    };
-    final body = jsonEncode({"content": content});
 
     try {
-      final response = await http.put(url, headers: headers, body: body);
+      final success = await RecruitmentService.updateComment(
+        recruitmentId: widget.recruitmentId,
+        commentId: commentId,
+        content: content,
+      );
 
-      if (response.statusCode == 200) {
+      if (success) {
         _showSnackBar("댓글이 수정되었습니다.");
         _fetchRecruitmentDetail();
       } else {
-        _showSnackBar("댓글 수정에 실패했습니다: ${response.statusCode}");
+        _showSnackBar("댓글 수정에 실패했습니다.");
       }
     } catch (e) {
       _showSnackBar("네트워크 오류 발생: $e");
@@ -198,22 +292,17 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
       return;
     }
 
-    final url = Uri.parse(
-      "${ApiHelper.baseUrl}/recruitment/comment/${widget.recruitmentId}/$commentId",
-    );
-    final headers = {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer $accessToken",
-    };
-
     try {
-      final response = await http.delete(url, headers: headers);
+      final success = await RecruitmentService.deleteComment(
+        recruitmentId: widget.recruitmentId,
+        commentId: commentId,
+      );
 
-      if (response.statusCode == 200) {
+      if (success) {
         _showSnackBar("댓글이 삭제되었습니다.");
         _fetchRecruitmentDetail();
       } else {
-        _showSnackBar("댓글 삭제에 실패했습니다: ${response.statusCode}");
+        _showSnackBar("댓글 삭제에 실패했습니다.");
       }
     } catch (e) {
       _showSnackBar("네트워크 오류 발생: $e");
@@ -278,30 +367,6 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     );
   }
 
-  void _showDeleteConfirmDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('모집글 삭제'),
-            content: const Text('모집글을 삭제하시겠습니까?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('아니오'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _deleteRecruitment();
-                },
-                child: const Text('예', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-    );
-  }
-
   void _showSnackBar(String message) {
     if (!mounted) return; // 마운트 상태 확인
 
@@ -321,77 +386,6 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     }
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'STUDY':
-        return Icons.school;
-      case 'READING':
-        return Icons.book;
-      case 'WORKOUT':
-        return Icons.fitness_center;
-      default:
-        return Icons.group;
-    }
-  }
-
-  String _getCategoryName(String category) {
-    switch (category) {
-      case 'STUDY':
-        return '공부';
-      case 'READING':
-        return '독서';
-      case 'WORKOUT':
-        return '운동';
-      default:
-        return '기타';
-    }
-  }
-
-  Future<void> _deleteRecruitment() async {
-    try {
-      log("📌 모집글 삭제 시작 - 모집글ID: ${widget.recruitmentId}");
-
-      final bool result = await RecruitmentService.deleteRecruitment(
-        widget.recruitmentId,
-      );
-
-      if (result) {
-        log("✅ 모집글 삭제 성공");
-        _showSnackBar("모집글이 삭제되었습니다.");
-        if (mounted) {
-          Navigator.pop(context, true);
-        }
-      } else {
-        log("❌ 모집글 삭제 실패");
-        _showSnackBar("모집글 삭제에 실패했습니다.");
-      }
-    } catch (e) {
-      log("❌ 네트워크 오류: $e", error: e);
-      _showSnackBar("네트워크 오류 발생: $e");
-    }
-  }
-
-  Future<void> _navigateToEditScreen() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => RecruitmentEditScreen(
-              recruitmentId: widget.recruitmentId,
-              initialCategory: recruitmentDetail['category'] ?? 'STUDY',
-              initialRecruitmentStatus:
-                  recruitmentDetail['recruitmentStatus'] == 'RECRUITING'
-                      ? '모집중'
-                      : '모집 완료',
-            ),
-      ),
-    );
-
-    if (result == true && mounted) {
-      _fetchRecruitmentDetail();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -403,12 +397,12 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                   IconButton(
                     icon: const Icon(Icons.edit),
                     onPressed: () {
-                      _navigateToEditScreen();
+                      _showEditRecruitmentDialog();
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete),
-                    onPressed: () => _showDeleteConfirmDialog(),
+                    onPressed: () => _showDeleteRecruitmentConfirmDialog(),
                   ),
                 ]
                 : null,
@@ -454,7 +448,7 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '${recruitmentDetail['recruitGroupName'] ?? '그룹명 없음'} 그룹',
+                                    '그룹명: ${recruitmentDetail['recruitGroupName'] ?? '그룹명 없음'}',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey,
@@ -627,7 +621,9 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                           final commentAuthor =
                               comment['authorName'] ?? '알 수 없음';
                           final isCommentAuthor =
-                              nickname != null && commentAuthor == nickname;
+                              (userName != null && commentAuthor == userName) ||
+                              (userNickname != null &&
+                                  commentAuthor == userNickname);
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -760,9 +756,10 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
       // 모집 상태 변경 API 호출
       await RecruitmentService.updateRecruitment(
         recruitmentId: widget.recruitmentId,
-        title: recruitmentDetail['title'] ?? '',
-        content: recruitmentDetail['content'] ?? '',
-        category: recruitmentDetail['category'] ?? 'STUDY',
+        authorId: recruitmentDetail['authorId'],
+        recruitGroupId: recruitmentDetail['recruitGroupId'],
+        title: recruitmentDetail['title'] ?? '수정할 제목을 입력하시요.',
+        content: recruitmentDetail['content'] ?? '수정할 내용을 입력하시요.',
         recruitmentStatus: newStatus == 'RECRUITING' ? '모집중' : '모집 완료',
       );
 

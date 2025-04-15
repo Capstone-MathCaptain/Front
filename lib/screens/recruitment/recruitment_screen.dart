@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:capstone/screens/recruitment/recruitment_create_screen.dart';
 import 'package:capstone/screens/recruitment/recruitment_detail_screen.dart';
 import 'package:capstone/services/recruitment_service.dart';
-import 'package:capstone/models/recruitment.dart';
-import 'package:capstone/services/group_service.dart';
-import 'package:capstone/models/group.dart';
-import 'package:capstone/services/user_service.dart';
-import 'package:capstone/models/user.dart';
-import 'package:capstone/services/api_helper.dart';
 import 'dart:developer';
+import 'package:capstone/services/group_service.dart';
+import 'package:capstone/services/user_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 class RecruitmentListScreen extends StatefulWidget {
   const RecruitmentListScreen({super.key});
@@ -20,71 +15,63 @@ class RecruitmentListScreen extends StatefulWidget {
 }
 
 class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
-  List<Recruitment> _recruitments = [];
-  bool _isLoading = true;
-  String? _error;
-  User? _currentUser;
-  List<Group> _userGroups = [];
+  List<dynamic> _recruitments = [];
+  bool _isLoading = false;
+  bool canCreateRecruitment = false;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadRecruitments();
+    _checkUserGroupLeader();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadRecruitments() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      log('데이터 로드 시작...');
+      final recruitments = await RecruitmentService.fetchRecruitments();
+      setState(() {
+        _recruitments = recruitments;
+      });
+    } catch (e) {
+      log("모집글 정보를 불러오는데 실패했습니다: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
-      // 토큰 갱신 시도
-      log('토큰 갱신 시도 중...');
-      final tokenResult = await ApiHelper.checkAndRefreshToken();
-      log('토큰 갱신 결과: $tokenResult');
-
-      // SharedPreferences에서 토큰 및 userId 확인
+  //현재 유저가 리더로 있는 그룹이 있는지 판별
+  Future<void> _checkUserGroupLeader() async {
+    try {
       final prefs = await SharedPreferences.getInstance();
-      final accessToken = prefs.getString('access_token');
-      final userId = prefs.getInt('userId');
-      log('저장된 토큰: ${accessToken != null ? "있음" : "없음"}');
-      log('저장된 userId: $userId');
+      final userId = prefs.getInt('userId'); // 저장된 userId 불러오기
 
-      // 현재 로그인한 사용자 정보 가져오기
-      log('사용자 정보 요청 시작...');
-      _currentUser = await UserService.getCurrentUser();
-      log('사용자 정보 응답: ${_currentUser != null ? "성공" : "실패"}');
-      log(
-        '현재 사용자: ${_currentUser != null ? "ID: ${_currentUser!.userId}, 닉네임: ${_currentUser!.nickname}" : "null"}',
-      ); // User 객체의 기본 정보 출력
-
-      // 사용자가 리더인 그룹 목록 가져오기
-      log('사용자 그룹 요청 시작...');
-      _userGroups = await GroupService.getUserGroups();
-      log('사용자 그룹 응답: ${_userGroups.length}개 그룹 발견');
-      for (var group in _userGroups) {
-        log(
-          '그룹 정보: ID=${group.groupId}, 이름=${group.groupName}, 카테고리=${group.category}',
-        );
+      if (userId == null) {
+        log("userId를 불러오는데 실패했습니다.");
+        return;
       }
 
-      // 모집글 목록 가져오기
-      final recruitments = await RecruitmentService.getRecruitments();
-      log('모집글 목록 응답: ${recruitments.length}개 모집글 발견');
+      final userInfo = await UserService.getUserInfo(userId: userId);
+      final userName = userInfo['name'];
+      final userNickname = userInfo['nickname'];
 
-      if (mounted) {
-        setState(() {
-          _recruitments = recruitments;
-          _isLoading = false;
-        });
+      final userGroups = await GroupService.fetchUserGroups();
+      for (var group in userGroups) {
+        if (group['leaderName'] == userName ||
+            group['leaderName'] == userNickname) {
+          setState(() {
+            canCreateRecruitment = true;
+          });
+          break;
+        }
       }
     } catch (e) {
-      log('데이터 로드 실패: $e'); // 디버깅용 로그
-      log('에러 StackTrace: ${StackTrace.current}');
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
+      log("사용자 정보를 확인하는데 실패했습니다: $e");
     }
   }
 
@@ -93,47 +80,34 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('모집글 목록')),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // 모집글 생성 버튼 클릭 시 로그 추가
-          log('모집글 생성 버튼 클릭됨');
-          log('현재 사용자: ${_currentUser?.nickname ?? "로그인 필요"}');
-          log('사용자 그룹 수: ${_userGroups.length}');
-
-          // 사용자 로그인 상태 확인
-          if (_currentUser == null) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('로그인이 필요합니다.')));
-            return;
-          }
-
-          // 사용자 그룹 확인
-          if (_userGroups.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('작성 가능한 그룹이 없습니다. 그룹을 먼저 생성해주세요.')),
-            );
-            return;
-          }
-
-          // 모집글 생성 화면으로 이동
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const RecruitmentCreateScreen(),
-            ),
-          ).then((_) => _loadData());
-        },
+        onPressed:
+            canCreateRecruitment
+                ? () {
+                  // 모집글 생성 화면으로 이동
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RecruitmentCreateScreen(),
+                    ),
+                  ).then((_) => _loadRecruitments());
+                }
+                : () {
+                  // 모집글 작성 불가 메시지 표시
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('모집글을 작성할 수 있는 그룹이 없습니다. 먼저 그룹을 생성해주세요.'),
+                    ),
+                  );
+                },
         child: const Icon(Icons.add),
       ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(child: Text('오류: $_error'))
               : _recruitments.isEmpty
               ? const Center(child: Text('모집글이 없습니다.'))
               : RefreshIndicator(
-                onRefresh: _loadData,
+                onRefresh: RecruitmentService.fetchRecruitments,
                 child: ListView.builder(
                   itemCount: _recruitments.length,
                   itemBuilder: (context, index) {
@@ -144,67 +118,28 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
                         vertical: 8,
                       ),
                       child: ListTile(
-                        title: Text(recruitment.title),
+                        title: Text(recruitment['title']),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('작성자: ${recruitment.authorName}'),
-                            Text('그룹: ${recruitment.recruitGroupName}'),
-                            Text('카테고리: ${recruitment.category}'),
-                            Text('상태: ${recruitment.recruitmentStatus}'),
-                            Text('작성일: ${recruitment.createdAt}'),
+                            Text('작성자: ${recruitment['authorName']}'),
+                            Text('그룹명: ${recruitment['recruitGroupName']}'),
+                            Text('카테고리: ${recruitment['category']}'),
+                            Text('상태: ${recruitment['recruitmentStatus']}'),
+                            Text('작성일: ${recruitment['createdAt']}'),
                           ],
                         ),
-                        onTap: () async {
-                          // 모집글 클릭 시 상세 정보 로깅
-                          int recruitmentId = recruitment.recruitmentId;
-                          int recruitGroupId = recruitment.recruitGroupId;
-
-                          log('======= 모집글 클릭 정보 =======');
-                          log('🔍 모집글 ID: $recruitmentId');
-                          log('🏢 그룹 ID: $recruitGroupId');
-                          log('📑 모집글 제목: ${recruitment.title}');
-                          log('👤 작성자: ${recruitment.authorName}');
-                          log('👥 그룹명: ${recruitment.recruitGroupName}');
-                          log('🏷️ 카테고리: ${recruitment.category}');
-                          log('🚩 모집 상태: ${recruitment.recruitmentStatus}');
-                          log('📅 생성일: ${recruitment.createdAt}');
-                          log('🔄 업데이트일: ${recruitment.updatedAt}');
-                          log('==============================');
-
-                          // recruitmentId가 유효하지 않은 경우에 그룹 ID 매핑 확인
-                          if (recruitmentId <= 0 && recruitGroupId > 0) {
-                            log('⚠️ 유효하지 않은 모집글 ID - 그룹 ID 기반으로 매핑 확인');
-
-                            final prefs = await SharedPreferences.getInstance();
-                            final groupMappingKey =
-                                'group_id_mapping_$recruitGroupId';
-                            final mappedId = prefs.getInt(groupMappingKey);
-
-                            if (mappedId != null && mappedId > 0) {
-                              log(
-                                '✅ 그룹 ID($recruitGroupId) 매핑에서 모집글 ID 발견: $mappedId',
-                              );
-                              recruitmentId = mappedId;
-                            } else {
-                              log('⚠️ 그룹 ID($recruitGroupId)에 매핑된 모집글 ID가 없음');
-                            }
-                          }
-
+                        onTap: () {
                           // 모집글 상세 화면으로 이동
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder:
                                   (context) => RecruitmentDetailScreen(
-                                    // 모집글 ID가 유효한 경우 사용, 아니면 그룹 ID 사용
-                                    recruitmentId:
-                                        recruitmentId > 0
-                                            ? recruitmentId
-                                            : recruitGroupId,
+                                    recruitmentId: recruitment['recruitmentId'],
                                   ),
                             ),
-                          ).then((_) => _loadData());
+                          ).then((_) => _loadRecruitments());
                         },
                       ),
                     );

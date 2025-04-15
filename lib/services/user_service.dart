@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'package:capstone/services/api_helper.dart';
-import 'package:capstone/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_helper.dart';
 
 class UserService {
   /// ✅ 사용자 이메일 찾기
@@ -17,11 +16,14 @@ class UserService {
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
+        log("✅ 이메일 찾기 성공: ${responseData['data']['email']}");
         return responseData['data']['email'];
       } else {
+        log("❌ 이메일 찾기 실패: ${response.body}");
         return null;
       }
     } catch (e) {
+      log("❌ 네트워크 오류: $e", error: e);
       return null;
     }
   }
@@ -37,11 +39,14 @@ class UserService {
       );
 
       if (response.statusCode == 200) {
+        log("✅ 비밀번호 재설정 요청 성공");
         return true;
       } else {
+        log("❌ 비밀번호 찾기 실패: ${response.body}");
         return false;
       }
     } catch (e) {
+      log("❌ 네트워크 오류: $e", error: e);
       return false;
     }
   }
@@ -69,92 +74,71 @@ class UserService {
       );
 
       if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final userId = responseData['data']['userId'];
+
+        // userId 저장
+        await saveuserId(userId);
+
+        log("✅ 회원가입 성공");
         return true;
       } else {
+        log("❌ 회원가입 실패: ${response.body}");
         return false;
       }
     } catch (e) {
+      log("❌ 네트워크 오류: $e", error: e);
       return false;
     }
   }
 
-  static Future<User?> getCurrentUser() async {
+  // userId 저장 함수
+  static Future<void> saveuserId(int userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('userId', userId);
+  }
+
+  // userId 가져오기
+  static Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('userId');
+  }
+
+  static Future<Map<String, dynamic>> getUserInfo({required int userId}) async {
     try {
-      log('💡 getCurrentUser 호출 시작');
-
-      // 토큰과 사용자 ID 가져오기
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt('userId');
-      final accessToken = prefs.getString('access_token');
-
-      log(
-        '로그인 상태 확인 - 액세스 토큰: ${accessToken != null ? "있음" : "없음"}, userId: $userId',
+      final response = await ApiHelper.sendRequest(
+        endpoint: '/user/$userId',
+        method: 'GET',
       );
+      final decodedData = utf8.decode(response.bodyBytes);
+      final responseData = jsonDecode(decodedData);
 
-      // 토큰이 없으면 로그인되지 않은 상태
-      if (accessToken == null) {
-        log('⚠️ 액세스 토큰 없음 - 로그인 필요');
-        return null;
-      }
-
-      // userId가 없으면 사용할 수 없음
-      if (userId == null) {
-        log('⚠️ userId 값이 없음 - 로그인 필요');
-        return null;
-      }
-
-      // 토큰 갱신 시도
-      log('🔄 토큰 갱신 시도');
-      await ApiHelper.checkAndRefreshToken();
-
-      // 사용자 정보 요청 (토큰 갱신 후)
-      log('📡 사용자 정보 요청 시작 - userId: $userId');
-
-      try {
-        // 서버 엔드포인트를 통해 사용자 정보 요청
-        final response = await ApiHelper.sendRequest(
-          endpoint: "/user/$userId",
-          method: "GET",
-          includeToken: true,
+      if (response.statusCode == 200 && responseData["status"] == true) {
+        log('✅ 사용자 정보 조회 성공: ${responseData['data']}');
+        return responseData['data'];
+      } else if (response.statusCode == 400) {
+        log('❌ 잘못된 요청: 필수 필드 누락 또는 잘못된 요청');
+        throw Exception("필수 필드 누락 또는 잘못된 요청입니다.");
+      } else if (response.statusCode == 404) {
+        log('❌ 리소스를 찾을 수 없음: 해당 유저가 없습니다.');
+        throw Exception("해당 유저가 없습니다.");
+      } else {
+        log(
+          '사용자 정보 조회 실패. 응답: ${response.statusCode}, ${responseData['message']}',
         );
-
-        log('📥 응답 상태 코드: ${response.statusCode}');
-
-        // 응답 성공 시 사용자 정보 파싱
-        if (response.statusCode == 200) {
-          // UTF-8로 인코딩된 응답 본문을 올바르게 디코딩
-          final String decodedBody = utf8.decode(response.bodyBytes);
-          log('📥 응답 본문: $decodedBody');
-
-          final responseData = json.decode(decodedBody);
-
-          if (responseData['status'] == true && responseData['data'] != null) {
-            log('✅ 사용자 정보 조회 성공');
-            final nickname = responseData['data']['nickname'] ?? '알 수 없음';
-            final email = responseData['data']['email'] ?? '알 수 없음';
-            log('👤 현재 로그인된 사용자 - 닉네임: $nickname, 이메일: $email');
-            return User.fromJson(responseData['data']);
-          } else {
-            log('❌ 서버 응답 status가 false 또는 데이터 없음');
-            return null;
-          }
-        } else if (response.statusCode == 401) {
-          log('🔑 인증 오류 발생 - 토큰이 만료되었을 수 있음');
-          return null;
-        } else if (response.statusCode == 403) {
-          log('🔒 접근 권한 없음 - 권한 문제');
-          return null;
-        } else {
-          log('❌ 서버 응답 오류: ${response.statusCode}');
-          return null;
-        }
-      } catch (e) {
-        log('❌ API 요청 실패: $e');
-        return null;
+        throw Exception(responseData['message'] ?? "사용자 정보 조회 실패");
       }
     } catch (e) {
-      log('❌ getCurrentUser 오류: $e');
-      return null;
+      log("❌ 네트워크 오류: $e", error: e);
+      throw Exception("네트워크 오류 발생: $e");
+    }
+  }
+
+  /// ✅ 로그인 성공 시 userId 저장
+  static Future<void> fetchAndSaveUserId() async {
+    final userId = await getUserId();
+    if (userId != null) {
+      await saveuserId(userId);
     }
   }
 }

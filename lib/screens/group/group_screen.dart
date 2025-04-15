@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:capstone/screens/group/group_create_screen.dart';
 import 'package:capstone/services/group_service.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:capstone/models/group.dart';
-import 'dart:developer' as developer;
+import 'dart:developer';
 
 class GroupPage extends StatefulWidget {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey;
@@ -17,10 +16,9 @@ class GroupPage extends StatefulWidget {
 
 class GroupPageState extends State<GroupPage>
     with SingleTickerProviderStateMixin {
-  List<Group> _userGroups = [];
+  List<dynamic> _userGroups = [];
   bool _isLoading = false;
   bool _isFabExpanded = false;
-  String _errorMessage = '';
 
   late AnimationController _animationController;
   final TextEditingController _searchController = TextEditingController();
@@ -29,7 +27,6 @@ class GroupPageState extends State<GroupPage>
   void initState() {
     super.initState();
     fetchUserGroups();
-
     // FAB 애니메이션 컨트롤러 설정
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 250),
@@ -56,104 +53,54 @@ class GroupPageState extends State<GroupPage>
     });
   }
 
+  /// 검색 오버레이 실행 (오버레이 바깥 터치 시 닫힘)
+  void _showSearchOverlay() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: const Color.fromRGBO(0, 0, 0, 0.5),
+      builder: (context) {
+        return Stack(
+          children: [
+            // 화면 전체를 뒤덮는 투명 컨테이너
+            // 이 영역을 탭하면 bottomSheet가 닫힘
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(color: Colors.transparent),
+            ),
+
+            // 아래쪽에 붙는 DraggableScrollableSheet
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SearchOverlay(), // <-- 기존 SearchOverlay 위젯
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   /// 그룹 목록 불러오기
   Future<void> fetchUserGroups() async {
-    developer.log('🔄 fetchUserGroups 메서드 호출됨');
     if (!mounted) return;
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
     });
 
     try {
-      final groups = await GroupService.getUserGroups();
-      developer.log('📊 그룹 데이터 받음: ${groups.length}개 그룹');
-
-      // 각 그룹에 대한 상세 정보를 로깅
-      for (var group in groups) {
-        developer.log(
-          '그룹 정보: ID=${group.groupId}, 이름=${group.groupName}, 카테고리=${group.category}, 해시태그=${group.hashtags}',
-        );
-      }
-
-      developer.log(
-        '📋 그룹 목록 요약: ${groups.map((g) => '${g.groupId}:${g.groupName}').toList()}',
-      );
+      final List<dynamic> groups = await GroupService.fetchUserGroups();
 
       if (!mounted) return;
       setState(() {
         _userGroups = groups;
-        _isLoading = false;
       });
 
       if (_userGroups.isEmpty) {
-        developer.log('⚠️ 사용자 그룹이 없음');
         _showSnackBar("가입된 그룹이 없습니다.");
       }
     } catch (e) {
-      developer.log('❌ 그룹 데이터 로딩 오류: $e', error: e);
-      setState(() {
-        _isLoading = false;
-        _errorMessage = '그룹 정보를 불러오는데 실패했습니다: $e';
-      });
       _showSnackBar("그룹 정보를 불러오는데 실패했습니다: $e");
-    }
-  }
-
-  /// 검색 다이얼로그 표시
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text("그룹 검색"),
-            content: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(hintText: "검색어 입력"),
-              onSubmitted: (query) {
-                Navigator.pop(context);
-                _searchGroups(query);
-              },
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("취소"),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _searchGroups(_searchController.text);
-                },
-                child: const Text("검색"),
-              ),
-            ],
-          ),
-    );
-  }
-
-  /// 그룹 검색 (API 호출)
-  Future<void> _searchGroups(String query) async {
-    if (query.isEmpty) return;
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final List<dynamic> searchResults = await GroupService.searchGroups(
-        query: query,
-      );
-      if (!mounted) return;
-      setState(() {
-        _userGroups = searchResults.map((e) => Group.fromJson(e)).toList();
-      });
-
-      if (_userGroups.isEmpty) {
-        _showSnackBar("검색 결과가 없습니다.");
-      }
-    } catch (e) {
-      _showSnackBar("검색 중 오류 발생: $e");
     } finally {
       if (mounted) {
         setState(() {
@@ -182,141 +129,226 @@ class GroupPageState extends State<GroupPage>
                 itemCount: _userGroups.length,
                 itemBuilder: (context, index) {
                   final group = _userGroups[index];
-
-                  return _buildGroupCard(group);
-                },
-              )
-              : const Center(child: Text("가입된 그룹이 없습니다.")),
-      floatingActionButton: SizedBox(
-        width: 60, // FAB 펼쳤을 때 필요한 너비
-        height: 220, // FAB 펼쳤을 때 필요한 높이(간격에 따라 조절)
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomRight,
-          children: [
-            // ─────────────────────────────────────
-            // 1) 그룹 생성 버튼 (+ 아이콘)
-            // ─────────────────────────────────────
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              // 메인 FAB(아래)보다 2단계 위로
-              bottom: _isFabExpanded ? 156 : 16,
-              right: 16,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 250),
-                opacity: _isFabExpanded ? 1.0 : 0.0,
-                child: FloatingActionButton(
-                  heroTag: "create_fab",
-                  backgroundColor: Colors.purple.shade400,
-                  onPressed: () async {
-                    // 그룹 생성 페이지로 이동
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const GroupCreatePage(),
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        group['groupName'] ?? "알 수 없는 그룹",
+                        style: GoogleFonts.notoSansKr(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    );
-                    // 이동 후 FAB 메뉴 닫기
-                    _toggleFabMenu();
-                  },
-                  child: const Icon(Icons.add),
-                ),
-              ),
-            ),
-
-            // ─────────────────────────────────────
-            // 2) 검색 버튼 (돋보기 아이콘)
-            // ─────────────────────────────────────
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              // 메인 FAB(아래)보다 1단계 위로
-              bottom: _isFabExpanded ? 86 : 16,
-              right: 16,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 250),
-                opacity: _isFabExpanded ? 1.0 : 0.0,
-                child: FloatingActionButton(
-                  heroTag: "search_fab",
-                  backgroundColor: Colors.purple.shade300,
-                  onPressed: () {
-                    _showSearchDialog();
-                    _toggleFabMenu();
-                  },
-                  child: const Icon(Icons.search),
-                ),
-              ),
-            ),
-
-            // ─────────────────────────────────────
-            // 3) 메인 FAB (플러스 → X 회전)
-            // ─────────────────────────────────────
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              bottom: 16,
-              right: 16,
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Transform.rotate(
-                    // 0 ~ 45도(π/4) 회전
-                    angle: _animationController.value * (3.14 / 4),
-                    child: FloatingActionButton(
-                      heroTag: "main_fab",
-                      backgroundColor: Colors.purple,
-                      onPressed: _toggleFabMenu,
-                      child: const Icon(Icons.add),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("리더 : ${group['leaderName'] ?? "알 수 없음"}"),
+                          Text("카테고리 : ${group['category'] ?? "알 수 없음"}"),
+                          Text("그룹 포인트 : ${group['groupPoint'] ?? 0}"),
+                          if (group['hashtag'] != null &&
+                              group['hashtag'] is List &&
+                              (group['hashtag'] as List).isNotEmpty)
+                            Text(
+                              "해시태그: ${(group['hashtag'] as List).join(', ')}",
+                            ),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) =>
+                                    GroupDetailPage(groupId: group['groupId']),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
-              ),
+              )
+              : const Center(child: Text("가입된 그룹이 없습니다.")),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isFabExpanded) ...[
+            FloatingActionButton(
+              heroTag: "search_fab",
+              backgroundColor: const Color.fromARGB(255, 192, 143, 200),
+              onPressed: () {
+                _showSearchOverlay(); // 검색 오버레이 실행
+                _toggleFabMenu();
+              },
+              child: const Icon(Icons.search),
+            ),
+            const SizedBox(height: 12),
+            FloatingActionButton(
+              heroTag: "create_fab",
+              backgroundColor: const Color.fromARGB(255, 192, 143, 200),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GroupCreatePage(),
+                  ),
+                ).then((result) {
+                  if (result == true) {
+                    fetchUserGroups();
+                  }
+                });
+                _toggleFabMenu();
+              },
+              child: const Icon(Icons.add),
             ),
           ],
-        ),
+          FloatingActionButton(
+            heroTag: "main_fab",
+            backgroundColor: Colors.purple,
+            onPressed: _toggleFabMenu,
+            child: Icon(_isFabExpanded ? Icons.close : Icons.add),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildGroupCard(Group group) {
-    // 그룹 카드가 빌드될 때 로그 추가
-    developer.log(
-      '그룹 카드 빌드: ID=${group.groupId}, 이름=${group.groupName}, 카테고리=${group.category}',
-    );
+/// 🔍 **검색 오버레이 위젯 (카테고리별 그룹 검색)**
+class SearchOverlay extends StatefulWidget {
+  const SearchOverlay({super.key});
 
-    return InkWell(
-      onTap: () {
-        // 그룹이 선택되었을 때 로그 추가
-        developer.log('그룹 선택됨: ID=${group.groupId}, 이름=${group.groupName}');
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => GroupDetailPage(groupId: group.groupId),
+  @override
+  SearchOverlayState createState() => SearchOverlayState();
+}
+
+class SearchOverlayState extends State<SearchOverlay> {
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedCategory = "STUDY";
+  List<dynamic> _groups = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchGroups();
+  }
+
+  /// 선택된 카테고리에 해당하는 그룹 데이터를 불러옴
+  void _fetchGroups() async {
+    try {
+      final groups = await GroupService.fetchCategoryGroup(_selectedCategory);
+      if (!mounted) return;
+      setState(() {
+        _groups = groups;
+      });
+    } catch (e) {
+      log("Error fetching groups: $e");
+    }
+  }
+
+  /// 카테고리 버튼 클릭 시 동작
+  void _onCategorySelected(String category) {
+    setState(() {
+      _selectedCategory = category;
+      _groups = [];
+    });
+    _fetchGroups();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // 검색 텍스트필드와 검색(확인) 버튼
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: "그룹명을 입력하세요...",
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      // 추후 검색 기능 구현 예정
+                    },
+                    child: const Text("검색"),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 가로 정렬된 카테고리 버튼
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _categoryButton("STUDY"),
+                  _categoryButton("FITNESS"),
+                  _categoryButton("READING"),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // 그룹 리스트 표시
+              Expanded(
+                child:
+                    _groups.isEmpty
+                        ? const Center(child: Text("그룹이 없습니다."))
+                        : ListView.builder(
+                          controller: scrollController,
+                          itemCount: _groups.length,
+                          itemBuilder: (context, index) {
+                            final group = _groups[index];
+                            return Card(
+                              child: ListTile(
+                                title: Text(group['groupName'] ?? "알 수 없는 그룹"),
+                                subtitle: Text(
+                                  "리더: ${group['leaderName'] ?? '알 수 없음'}",
+                                ),
+                                onTap: () {
+                                  // 그룹 상세 화면으로 이동
+                                },
+                              ),
+                            );
+                          },
+                        ),
+              ),
+            ],
           ),
         );
       },
-      child: Card(
-        elevation: 2,
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                group.groupName,
-                style: GoogleFonts.notoSansKr(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text("카테고리: ${group.category}"),
-              const SizedBox(height: 4),
-              if (group.hashtags.isNotEmpty)
-                Text("해시태그: ${group.hashtags.join(', ')}"),
-            ],
-          ),
-        ),
+    );
+  }
+
+  /// 카테고리 버튼 위젯
+  Widget _categoryButton(String category) {
+    final bool isSelected = _selectedCategory == category;
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            isSelected ? const Color.fromARGB(255, 188, 131, 198) : Colors.grey,
       ),
+      onPressed: () => _onCategorySelected(category),
+      child: Text(category),
     );
   }
 }

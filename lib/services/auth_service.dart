@@ -1,9 +1,9 @@
 import 'dart:developer';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:capstone/screens/home_screen.dart';
 import 'api_helper.dart';
+import 'user_service.dart';
 
 class AuthService {
   static final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
@@ -28,100 +28,26 @@ class AuthService {
         includeToken: false,
       );
 
+      log(response.body);
+      log(response.statusCode.toString());
+
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
-
-        // 토큰 저장
-        final accessToken = response.headers['authorization'] ?? "";
-        final refreshToken = response.headers['authorization-refresh'] ?? "";
-        await prefs.setString('access_token', accessToken);
-        await prefs.setString('refresh_token', refreshToken);
-
-        log('🔑 로그인 성공 - 이메일: $id');
-        log(
-          '💫 토큰 저장 완료 - 액세스 토큰: ${accessToken.isNotEmpty ? "있음" : "없음"}, 리프레시 토큰: ${refreshToken.isNotEmpty ? "있음" : "없음"}',
+        await prefs.setString(
+          'access_token',
+          response.headers['authorization'] ?? "",
+        );
+        await prefs.setString(
+          'refresh_token',
+          response.headers['authorization-refresh'] ?? "",
         );
 
-        // 로그인한 이메일 정보 저장
-        await prefs.setString('email', id);
+        await UserService.fetchAndSaveUserId();
 
-        try {
-          // 로그인 응답에서 사용자 ID 추출 시도
-          String? userId;
-          try {
-            // 응답 본문을 UTF-8로 디코딩
-            final String decodedBody = utf8.decode(response.bodyBytes);
-            log('📥 로그인 응답 본문: $decodedBody');
-
-            final responseData = json.decode(decodedBody);
-            if (responseData['data'] != null) {
-              userId =
-                  responseData['data']['userId']?.toString() ??
-                  responseData['data']['id']?.toString();
-
-              if (userId != null) {
-                await prefs.setInt('userId', int.parse(userId));
-                log('💾 사용자 ID 저장: $userId');
-              }
-            }
-          } catch (e) {
-            log('⚠️ 로그인 응답에서 사용자 ID 추출 실패: $e');
-          }
-
-          // 사용자 ID가 추출되지 않았을 경우, 사용자 정보 API 호출
-          if (userId == null) {
-            log('🔍 사용자 정보 API 호출 시작');
-
-            // 이메일로 사용자 조회 시도
-            final userEmailEndpoint = "/user/email/$id";
-            log('🔍 엔드포인트 호출: $userEmailEndpoint');
-
-            try {
-              final userResponse = await ApiHelper.sendRequest(
-                endpoint: userEmailEndpoint,
-                method: "GET",
-                includeToken: true,
-              );
-
-              log('📥 사용자 정보 응답 상태 코드: ${userResponse.statusCode}');
-
-              if (userResponse.statusCode == 200) {
-                // UTF-8로 디코딩
-                final String decodedBody = utf8.decode(userResponse.bodyBytes);
-                log('📥 사용자 정보 응답 본문: $decodedBody');
-
-                final userData = json.decode(decodedBody);
-
-                // 사용자 정보 로깅
-                if (userData['data'] != null) {
-                  final nickname = userData['data']['nickname'] ?? '알 수 없음';
-                  final name = userData['data']['name'] ?? '알 수 없음';
-                  log('👤 로그인한 사용자 정보 - 닉네임: $nickname, 이름: $name');
-
-                  // userId 저장
-                  if (userData['data']['id'] != null) {
-                    final id = userData['data']['id'];
-                    await prefs.setInt('userId', id);
-                    log('💾 사용자 ID 저장: $id (id 필드)');
-                  } else if (userData['data']['userId'] != null) {
-                    final id = userData['data']['userId'];
-                    await prefs.setInt('userId', id);
-                    log('💾 사용자 ID 저장: $id (userId 필드)');
-                  }
-                }
-              } else {
-                log('⚠️ 사용자 정보 API 호출 실패: ${userResponse.statusCode}');
-              }
-            } catch (e) {
-              log('⚠️ 사용자 정보 API 호출 오류: $e');
-            }
-          }
-        } catch (userError) {
-          log('❌ 사용자 정보 처리 오류: $userError');
-        }
+        log("✅ 로그인 성공");
 
         if (context.mounted) {
-          // ✅ 로그인 성공 후 HomeScreen으로 이동
+          // ✅ 로그인 성공 후 HomeScreen으로 이동 (userGroups 없이)
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -131,6 +57,7 @@ class AuthService {
         _showSnackBar("아이디 또는 비밀번호가 잘못되었습니다.");
       }
     } catch (e) {
+      log("❌ 로그인 요청 실패: $e", error: e);
       _showSnackBar("네트워크 오류가 발생했습니다.");
     }
   }
