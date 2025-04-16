@@ -1,4 +1,4 @@
-import 'package:capstone/screens/auth/login_screen.dart';
+import 'package:capstone/screens/user/login_screen.dart';
 import 'package:capstone/screens/home_screen.dart';
 
 import 'package:flutter/material.dart';

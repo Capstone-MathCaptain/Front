@@ -55,7 +55,7 @@ class RecruitmentOverviewWidget extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text('모집글')),
       body: FutureBuilder(
-        future: RecruitmentService.getRecruitments(),
+        future: RecruitmentService.fetchRecruitments(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return CircularProgressIndicator();

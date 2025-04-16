@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class ApiHelper {
-  static const String baseUrl = "http://15.165.32.175:8080";
+  static const String baseUrl = "http://localhost:8080";
   static const String refreshUrl = "$baseUrl/refresh-token"; // 액세스 토큰 갱신 엔드포인트
 
   /// ✅ 액세스 토큰 가져오기
