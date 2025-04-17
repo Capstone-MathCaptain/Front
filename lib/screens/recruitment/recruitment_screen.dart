@@ -4,8 +4,8 @@ import 'package:capstone/screens/recruitment/recruitment_detail_screen.dart';
 import 'package:capstone/services/recruitment_service.dart';
 import 'dart:developer';
 import 'package:capstone/services/group_service.dart';
-import 'package:capstone/services/user_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:capstone/services/api_helper.dart';
+import 'dart:convert';
 
 class RecruitmentListScreen extends StatefulWidget {
   const RecruitmentListScreen({super.key});
@@ -15,7 +15,7 @@ class RecruitmentListScreen extends StatefulWidget {
 }
 
 class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
-  List<dynamic> _recruitments = [];
+  List<dynamic> recruitments = [];
   bool _isLoading = false;
   bool canCreateRecruitment = false;
 
@@ -32,10 +32,8 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
     });
 
     try {
-      final recruitments = await RecruitmentService.fetchRecruitments();
-      setState(() {
-        _recruitments = recruitments;
-      });
+      recruitments = await RecruitmentService.fetchRecruitments();
+      setState(() {});
     } catch (e) {
       log("모집글 정보를 불러오는데 실패했습니다: $e");
     } finally {
@@ -48,27 +46,29 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
   //현재 유저가 리더로 있는 그룹이 있는지 판별
   Future<void> _checkUserGroupLeader() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt('userId'); // 저장된 userId 불러오기
+      final response = await ApiHelper.sendRequest(
+        endpoint: "/user/mypage",
+        method: "GET",
+        includeToken: true,
+      );
 
-      if (userId == null) {
-        log("userId를 불러오는데 실패했습니다.");
-        return;
-      }
+      if (response.statusCode == 200) {
+        final userInfo = jsonDecode(response.body)['data'];
+        final userName = userInfo['name'];
+        final userNickname = userInfo['nickname'];
 
-      final userInfo = await UserService.getUserInfo(userId: userId);
-      final userName = userInfo['name'];
-      final userNickname = userInfo['nickname'];
-
-      final userGroups = await GroupService.fetchUserGroups();
-      for (var group in userGroups) {
-        if (group['leaderName'] == userName ||
-            group['leaderName'] == userNickname) {
-          setState(() {
-            canCreateRecruitment = true;
-          });
-          break;
+        final userGroups = await GroupService.fetchUserGroups();
+        for (var group in userGroups) {
+          if (group['leaderName'] == userName ||
+              group['leaderName'] == userNickname) {
+            setState(() {
+              canCreateRecruitment = true;
+            });
+            break;
+          }
         }
+      } else {
+        log("사용자 정보를 불러오는데 실패했습니다.");
       }
     } catch (e) {
       log("사용자 정보를 확인하는데 실패했습니다: $e");
@@ -104,14 +104,14 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _recruitments.isEmpty
+              : recruitments.isEmpty
               ? const Center(child: Text('모집글이 없습니다.'))
               : RefreshIndicator(
-                onRefresh: RecruitmentService.fetchRecruitments,
+                onRefresh: _loadRecruitments,
                 child: ListView.builder(
-                  itemCount: _recruitments.length,
+                  itemCount: recruitments.length,
                   itemBuilder: (context, index) {
-                    final recruitment = _recruitments[index];
+                    final recruitment = recruitments[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(
                         horizontal: 16,
