@@ -11,8 +11,8 @@ class RankingService {
         method: "GET",
       );
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData =
-            jsonDecode(response.body)['data'];
+        final decoded = utf8.decode(response.bodyBytes); // ✅ 여기가 핵심!
+        final Map<String, dynamic> responseData = jsonDecode(decoded)['data'];
         log("✅ 랭킹 조회 성공: ${responseData['content'].length}개 항목");
         return RankingPageResponse.fromJson(responseData);
       } else if (response.statusCode == 400) {
@@ -65,30 +65,7 @@ class RankingPageResponse {
           (json['content'] as List)
               .map((item) => RankingItem.fromJson(item))
               .toList(),
-      pageInfo: PageInfo.fromJson(json['pageable']),
-    );
-  }
-}
-
-class RankingItem {
-  final int groupId;
-  final String groupName;
-  final int groupPoint;
-  final int ranking;
-
-  RankingItem({
-    required this.groupId,
-    required this.groupName,
-    required this.groupPoint,
-    required this.ranking,
-  });
-
-  factory RankingItem.fromJson(Map<String, dynamic> json) {
-    return RankingItem(
-      groupId: json['groupId'],
-      groupName: json['groupName'],
-      groupPoint: json['groupPoint'],
-      ranking: json['ranking'],
+      pageInfo: PageInfo.fromJson(json), // ✅ 변경: 전체 json에서 파싱
     );
   }
 }
@@ -108,10 +85,56 @@ class PageInfo {
 
   factory PageInfo.fromJson(Map<String, dynamic> json) {
     return PageInfo(
-      totalPages: json['totalPages'],
-      totalElements: json['totalElements'],
-      size: json['size'],
-      number: json['number'],
+      totalPages: json['totalPages'] ?? 1,
+      totalElements: json['totalElements'] ?? 0,
+      size: json['size'] ?? 10,
+      number: json['number'] ?? 0,
     );
   }
 }
+
+class RankingItem {
+  final int groupId;
+  final String groupName;
+  final int groupPoint;
+  final int ranking;
+
+  RankingItem({
+    required this.groupId,
+    required this.groupName,
+    required this.groupPoint,
+    required this.ranking,
+  });
+
+  factory RankingItem.fromJson(Map<String, dynamic> json) {
+    return RankingItem(
+      groupId: json['groupId'] ?? 0,
+      groupName: json['groupName'] ?? '',
+      groupPoint: json['groupPoint'] ?? 0,
+      ranking: json['ranking'] ?? 0,
+    );
+  }
+}
+
+// class PageInfo {
+//   final int totalPages;
+//   final int totalElements;
+//   final int size;
+//   final int number;
+
+//   PageInfo({
+//     required this.totalPages,
+//     required this.totalElements,
+//     required this.size,
+//     required this.number,
+//   });
+
+//   factory PageInfo.fromJson(Map<String, dynamic> json) {
+//     return PageInfo(
+//       totalPages: json['totalPages'],
+//       totalElements: json['totalElements'],
+//       size: json['size'],
+//       number: json['number'],
+//     );
+//   }
+// }

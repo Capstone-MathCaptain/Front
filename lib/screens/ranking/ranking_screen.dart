@@ -9,20 +9,25 @@ class RankingScreen extends StatefulWidget {
 }
 
 class _RankingScreenState extends State<RankingScreen> {
-  int currentPage = 0;
+  int currentPage = 1;
   RankingPageResponse? rankingData;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    loadRanking(currentPage);
+    loadRanking(1);
   }
 
   Future<void> loadRanking(int page) async {
+    if (page < 1 ||
+        (rankingData != null && page > rankingData!.pageInfo.totalPages))
+      return;
+
     setState(() {
       isLoading = true;
     });
+
     try {
       final data = await RankingService.fetchRanking(page);
       setState(() {
@@ -34,6 +39,7 @@ class _RankingScreenState extends State<RankingScreen> {
       setState(() {
         isLoading = false;
       });
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("랭킹 데이터를 불러오는데 실패했습니다: $e")));

@@ -77,8 +77,9 @@ class GroupService {
         method: "GET",
       );
 
+      final decodedData = utf8.decode(response.bodyBytes);
       if (response.statusCode == 200) {
-        return jsonDecode(response.body)['data'];
+        return jsonDecode(decodedData)['data'];
       } else {
         throw Exception("그룹 세부 정보를 불러오는 데 실패했습니다.");
       }
@@ -96,8 +97,9 @@ class GroupService {
         method: "GET",
       );
 
+      final decodedData = utf8.decode(response.bodyBytes);
       if (response.statusCode == 200) {
-        final List<dynamic> membersData = jsonDecode(response.body)['data'];
+        final List<dynamic> membersData = jsonDecode(decodedData)['data'];
         log("✅ 그룹 멤버 데이터 가져오기 성공: ${membersData.length}명");
         return membersData;
       } else {
@@ -118,8 +120,9 @@ class GroupService {
         endpoint: "/group/total?category=$category",
         method: "GET",
       );
+      final decodedData = utf8.decode(response.bodyBytes);
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body)['data'];
+        final List<dynamic> data = jsonDecode(decodedData)['data'];
         log("✅ [$category] 그룹 데이터 가져오기 성공: ${data.length}개 그룹");
         return data.cast<Map<String, dynamic>>();
       } else {
@@ -145,8 +148,9 @@ class GroupService {
         body: {"query": query},
       );
 
+      final decodedData = utf8.decode(response.bodyBytes);
       if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body)['data'];
+        final List<dynamic> responseData = jsonDecode(decodedData)['data'];
         log("✅ 그룹 검색 결과: ${responseData.length}개 그룹");
         return responseData;
       } else {

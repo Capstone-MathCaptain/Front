@@ -10,8 +10,8 @@ class ProfileService {
         method: "GET",
       );
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData =
-            jsonDecode(response.body)['data'];
+        final decoded = utf8.decode(response.bodyBytes); // ⭐ 인코딩 처리
+        final Map<String, dynamic> responseData = jsonDecode(decoded)['data'];
         log("✅ 프로필 조회 성공");
         return responseData;
       } else if (response.statusCode == 400) {

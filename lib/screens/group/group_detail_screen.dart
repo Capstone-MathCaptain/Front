@@ -14,7 +14,8 @@ class GroupDetailPage extends StatefulWidget {
   GroupDetailPageState createState() => GroupDetailPageState();
 }
 
-class GroupDetailPageState extends State<GroupDetailPage> {
+class GroupDetailPageState extends State<GroupDetailPage>
+    with TickerProviderStateMixin {
   late Future<Map<String, dynamic>> _groupDetails;
   late Future<List<dynamic>> _groupMembers;
   bool _isMemberListVisible = false;
@@ -26,14 +27,21 @@ class GroupDetailPageState extends State<GroupDetailPage> {
   @override
   void initState() {
     super.initState();
-    _groupDetails = _loadGroupDetails();
-    _groupMembers = _loadGroupMembers();
+
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
 
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
       curve: Curves.easeIn,
     );
+
     _fadeController.forward();
+
+    _groupDetails = _loadGroupDetails();
+    _groupMembers = _loadGroupMembers();
   }
 
   @override
