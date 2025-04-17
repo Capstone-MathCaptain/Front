@@ -10,7 +10,7 @@ class RecordService {
     String endTime,
   ) async {
     final response = await ApiHelper.sendRequest(
-      endpoint: '/record/end/$groupId',
+      endpoint: '/record/end/fitness/$groupId',
       method: 'POST',
       body: {
         'activityTime': activityTimeMinutes,
