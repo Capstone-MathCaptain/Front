@@ -752,12 +752,16 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     final newStatus =
         currentStatus == 'RECRUITING' ? 'COMPLETED' : 'RECRUITING';
 
+    if (recruitmentDetail['authorId'] == null) {
+      _showSnackBar("작성자 정보가 없습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
     try {
       // 모집 상태 변경 API 호출
       await RecruitmentService.updateRecruitment(
         recruitmentId: widget.recruitmentId,
-        authorId: recruitmentDetail['authorId'],
-        recruitGroupId: recruitmentDetail['recruitGroupId'],
+        authorId: recruitmentDetail['authorId'] ?? 0,
+        recruitGroupId: recruitmentDetail['recruitGroupId'] ?? 0,
         title: recruitmentDetail['title'] ?? '수정할 제목을 입력하시요.',
         content: recruitmentDetail['content'] ?? '수정할 내용을 입력하시요.',
         recruitmentStatus: newStatus == 'RECRUITING' ? '모집중' : '모집 완료',

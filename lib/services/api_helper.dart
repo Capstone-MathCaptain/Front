@@ -104,11 +104,6 @@ class ApiHelper {
     String? refreshToken = prefs.getString("refresh_token");
     String? accessToken = prefs.getString("access_token");
 
-    if (accessToken == null || refreshToken == null) {
-      log("토큰이 존재하지 않음 - 로그인 필요");
-      return null;
-    }
-
     try {
       final response = await http.get(
         Uri.parse(refreshUrl),
@@ -123,13 +118,9 @@ class ApiHelper {
         final responseData = response.headers['authorization'];
         String? newAccessToken = responseData;
 
-        if (newAccessToken != null) {
-          await prefs.setString("access_token", newAccessToken);
-          log("새로운 토큰 갱신 성공");
-          return newAccessToken;
-        } else {
-          log("토큰 갱신 실패: ${response.statusCode}");
-        }
+        await prefs.setString("access_token", newAccessToken!);
+        log("새로운 토큰 갱신 성공");
+        return newAccessToken;
       }
     } catch (e) {
       log("토큰 갱신 실패: $e", error: e);
