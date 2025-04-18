@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:capstone/services/api_helper.dart';
 import 'dart:developer';
-import 'package:capstone/services/record_service.dart';
 import 'package:capstone/services/group_service.dart';
 import 'package:capstone/screens/group/record_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class GroupDetailPage extends StatefulWidget {
   final int groupId;
@@ -13,6 +12,8 @@ class GroupDetailPage extends StatefulWidget {
   @override
   GroupDetailPageState createState() => GroupDetailPageState();
 }
+
+final ScrollController _memberScrollController = ScrollController();
 
 class GroupDetailPageState extends State<GroupDetailPage>
     with TickerProviderStateMixin {
@@ -89,15 +90,15 @@ class GroupDetailPageState extends State<GroupDetailPage>
   /// 잔디밭 색상 (초록 계열 예시; 원하는 색상으로 수정 가능)
   Color getIntensityColor(double percentage) {
     if (percentage == 0) {
-      return const Color(0xFFEBEDF0);
+      return const Color(0xFFBFDDE2); // 연한 회색-블루
     } else if (percentage <= 25) {
-      return const Color(0xFF9BE9A8);
+      return const Color(0xFFB4E6DF); // 연한 민트
     } else if (percentage <= 50) {
-      return const Color(0xFF40C463);
+      return const Color(0xFF82DCD0); // 밝은 민트
     } else if (percentage <= 75) {
-      return const Color(0xFF30A14E);
+      return const Color(0xFF4FCBC1); // 중간 민트
     } else {
-      return const Color(0xFF216E39);
+      return const Color(0xFF06D5CD); // 진한 민트 (메인 컬러)
     }
   }
 
@@ -110,67 +111,115 @@ class GroupDetailPageState extends State<GroupDetailPage>
         });
       },
       child: Container(
-        color: const Color.fromRGBO(0, 0, 0, 0.5),
+        color: const Color.fromRGBO(0, 0, 0, 0.5), // 배경: 반투명 어둡게
         child: Center(
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.8,
+            width: MediaQuery.of(context).size.width * 0.85,
             height: MediaQuery.of(context).size.height * 0.7,
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(24),
               boxShadow: const [
                 BoxShadow(
-                  color: Color.fromRGBO(0, 0, 0, 0.2),
+                  color: Colors.black26,
                   blurRadius: 10,
-                  spreadRadius: 2,
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _isMemberListVisible = false;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                const Text(
-                  "그룹원 목록",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Divider(),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: members.length,
-                    itemBuilder: (context, index) {
-                      final member = members[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        child: ListTile(
-                          leading: const Icon(Icons.person),
-                          title: Text(member['userName'] ?? '알 수 없는 사용자'),
-                          subtitle: Text(
-                            "주간 목표: ${member['userWeeklyGoal'] ?? 0}일",
+            child: Scrollbar(
+              thumbVisibility: true, // 항상 스크롤바 표시
+              controller: _memberScrollController,
+              radius: const Radius.circular(8),
+              thickness: 6,
+              child: SingleChildScrollView(
+                controller: _memberScrollController,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 닫기 버튼
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.black),
+                            onPressed: () {
+                              setState(() {
+                                _isMemberListVisible = false;
+                              });
+                            },
                           ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // 제목
+                      const Text(
+                        "그룹원 목록",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
-                      );
-                    },
+                      ),
+
+                      const SizedBox(height: 12),
+                      const Divider(color: Colors.black26),
+
+                      // 멤버 리스트
+                      members.isEmpty
+                          ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: Text(
+                                "그룹원이 없습니다.",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          )
+                          : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: members.length,
+                            itemBuilder: (context, index) {
+                              final member = members[index];
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.person,
+                                    color: Colors.black87,
+                                  ),
+                                  title: Text(
+                                    member['userName'] ?? '알 수 없는 사용자',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    "주간 목표: ${member['userWeeklyGoal'] ?? 0}일",
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
           ),
         ),
@@ -198,6 +247,7 @@ class GroupDetailPageState extends State<GroupDetailPage>
       "SATURDAY",
       "SUNDAY",
     ];
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Card(
@@ -208,265 +258,188 @@ class GroupDetailPageState extends State<GroupDetailPage>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: const LinearGradient(
-              colors: [Color(0xFFB39DDB), Color(0xFFE1BEE7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              colors: [Color(0xFF06D5CD), Color(0xFF3A86FF)],
+              begin: AlignmentDirectional(1, 1),
+              end: AlignmentDirectional(-1, -1),
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // 상단: 그룹 이름과 랭킹
-                  SizedBox(
-                    height: 40,
-                    child: Stack(
-                      children: [
-                        Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            groupName,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            "랭킹 #$groupRanking",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.white70,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 중간: 그룹 기본 정보
-                  Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.category,
-                            size: 20,
-                            color: Colors.white70,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "카테고리: $category",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 그룹 이름 + 총 인원
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      groupName,
+                      style: GoogleFonts.readexPro(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.tag,
-                            size: 20,
-                            color: Colors.white70,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              hashtags.isNotEmpty
-                                  ? "해시태그: ${hashtags.join(', ')}"
-                                  : "해시태그: 없음",
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      "인원 : $memberCount명",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // 랭킹 & 포인트 강조
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.military_tech,
+                      color: Colors.white70,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      "랭킹 #$groupRanking",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.star, color: Colors.white70, size: 18),
+                    const SizedBox(width: 4),
+                    Text(
+                      "포인트 $groupPoint",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // 카테고리 / 해시태그 (infoChip)
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _buildInfoChip(Icons.category, "카테고리: $category"),
+                    _buildInfoChip(
+                      Icons.tag,
+                      hashtags.isNotEmpty
+                          ? "해시태그: ${hashtags.join(', ')}"
+                          : "해시태그 없음",
+                    ),
+                  ],
+                ),
+
+                const Divider(color: Colors.white54, height: 32),
+
+                // 잔디밭 시각화
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children:
+                      days.map((day) {
+                        int achieved = weeklyGoalAchieve[day] ?? 0;
+                        double percentage =
+                            memberCount > 0
+                                ? (achieved / memberCount) * 100
+                                : 0;
+                        Color boxColor = getIntensityColor(percentage);
+                        return Column(
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: boxColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              day.substring(0, 3),
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 10,
                                 color: Colors.white,
                               ),
-                              textAlign: TextAlign.center,
                             ),
+                          ],
+                        );
+                      }).toList(),
+                ),
+
+                const SizedBox(height: 24),
+
+                // 1주 목표 달성률 게이지
+                FutureBuilder<List<dynamic>>(
+                  future: _groupMembers,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      );
+                    }
+                    double weeklyProgress = _calculateWeeklyProgress(
+                      snapshot.data!,
+                    );
+                    return Column(
+                      children: [
+                        const Text(
+                          "1주 목표 달성률",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.people,
-                            size: 20,
-                            color: Colors.white70,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "총 인원: $memberCount",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.star,
-                            size: 20,
-                            color: Colors.white70,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "그룹 포인트: $groupPoint",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const Divider(color: Colors.white54, height: 32),
-                  // 하단: 잔디밭과 1주 목표 달성률 게이지 (배경 없음)
-                  Column(
-                    children: [
-                      // 잔디밭
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children:
-                              days.map((day) {
-                                int achieved = weeklyGoalAchieve[day] ?? 0;
-                                double percentage =
-                                    memberCount > 0
-                                        ? (achieved / memberCount) * 100
-                                        : 0;
-                                Color boxColor = getIntensityColor(percentage);
-                                return Column(
-                                  children: [
-                                    Container(
-                                      width: 20,
-                                      height: 20,
-                                      decoration: BoxDecoration(
-                                        color: boxColor,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      day.substring(0, 3),
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // 1주 목표 달성률 게이지
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: FutureBuilder<List<dynamic>>(
-                          future: _groupMembers,
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            } else if (snapshot.hasError) {
-                              return const Center(
-                                child: Text(
-                                  "멤버 정보를 불러오는 중 오류 발생",
-                                  style: TextStyle(color: Colors.white),
+                        const SizedBox(height: 6),
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              height: 12,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(6),
+                                color: const Color(0xFFE0E3E7),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: weeklyProgress / 100,
+                                  backgroundColor: Colors.transparent,
+                                  valueColor: const AlwaysStoppedAnimation(
+                                    Color(0xFF06D5CD),
+                                  ),
                                 ),
-                              );
-                            } else {
-                              double weeklyProgress = _calculateWeeklyProgress(
-                                snapshot.data!,
-                              );
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const Text(
-                                    "1주 목표 달성률",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Container(
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          color: Color.fromRGBO(
-                                            235,
-                                            14,
-                                            14,
-                                            0.494,
-                                          ),
-                                        ),
-                                      ),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: LinearProgressIndicator(
-                                          value: weeklyProgress / 100,
-                                          backgroundColor: Colors.transparent,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.blue.shade600,
-                                              ),
-                                          minHeight: 12,
-                                        ),
-                                      ),
-                                      Positioned(
-                                        child: Text(
-                                          "${weeklyProgress.toStringAsFixed(1)}% / 100%",
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
-                            }
-                          },
+                              ),
+                            ),
+                            Text(
+                              "${weeklyProgress.toStringAsFixed(1)}%",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ),
@@ -474,9 +447,26 @@ class GroupDetailPageState extends State<GroupDetailPage>
     );
   }
 
+  Widget _buildInfoChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(text, style: const TextStyle(fontSize: 12, color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 전체 레이아웃을 Stack으로 감싸서 멤버 오버레이가 위에 뜨도록 함
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -494,7 +484,6 @@ class GroupDetailPageState extends State<GroupDetailPage>
                   builder: (context, constraints) {
                     return Stack(
                       children: [
-                        // 스크롤 가능한 메인 콘텐츠
                         SingleChildScrollView(
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
@@ -502,14 +491,37 @@ class GroupDetailPageState extends State<GroupDetailPage>
                             ),
                             child: IntrinsicHeight(
                               child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  // 그룹 프로필 카드가 전체 높이의 90% 정도를 차지
-                                  Expanded(
-                                    child: _buildGroupProfileCard(groupData),
+                                  // ✅ 뒤로가기 버튼과 타이틀
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.arrow_back_ios,
+                                          color: Colors.black,
+                                        ),
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        '상세 정보',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  // 하단 버튼 영역 (인증하기, 멤버 버튼)
+                                  const SizedBox(height: 12),
+
+                                  // 그룹 프로필 카드
+                                  _buildGroupProfileCard(groupData),
+
+                                  const Spacer(),
+
+                                  // 하단 버튼
                                   SizedBox(
                                     height: 80,
                                     child: Row(
@@ -526,11 +538,11 @@ class GroupDetailPageState extends State<GroupDetailPage>
                                                       groupId: widget.groupId,
                                                     ),
                                               ),
-                                            ); // 인증하기 버튼 동작
+                                            );
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(
-                                              0xFFB39DDB,
+                                              0xFF06D5CD,
                                             ),
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 12,
@@ -557,7 +569,9 @@ class GroupDetailPageState extends State<GroupDetailPage>
                                             });
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.grey[400],
+                                            backgroundColor: const Color(
+                                              0xFF3A86FF,
+                                            ),
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 12,
                                               horizontal: 16,
@@ -570,11 +584,12 @@ class GroupDetailPageState extends State<GroupDetailPage>
                                           icon: const Icon(
                                             Icons.people,
                                             size: 16,
+                                            color: Colors.white,
                                           ),
                                           label: const Text(
                                             "멤버",
                                             style: TextStyle(
-                                              color: Colors.black87,
+                                              color: Colors.white,
                                               fontSize: 14,
                                             ),
                                           ),
@@ -587,7 +602,8 @@ class GroupDetailPageState extends State<GroupDetailPage>
                             ),
                           ),
                         ),
-                        // 멤버 목록 오버레이 (멤버 버튼 클릭 시)
+
+                        // 멤버 오버레이
                         if (_isMemberListVisible)
                           FutureBuilder<List<dynamic>>(
                             future: _groupMembers,

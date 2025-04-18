@@ -3,9 +3,6 @@ import 'package:capstone/screens/recruitment/recruitment_create_screen.dart';
 import 'package:capstone/screens/recruitment/recruitment_detail_screen.dart';
 import 'package:capstone/services/recruitment_service.dart';
 import 'dart:developer';
-import 'package:capstone/services/group_service.dart';
-import 'package:capstone/services/api_helper.dart';
-import 'dart:convert';
 import 'package:intl/intl.dart';
 
 class RecruitmentListScreen extends StatefulWidget {
@@ -75,20 +72,12 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      child: ListTile(
-                        title: Text(recruitment['title']),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('작성자: ${recruitment['authorName']}'),
-                            Text('그룹명: ${recruitment['recruitGroupName']}'),
-                            Text('카테고리: ${recruitment['category']}'),
-                            Text('상태: ${recruitment['recruitmentStatus']}'),
-                            Text('작성일: $formattedDate'),
-                          ],
-                        ),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: InkWell(
                         onTap: () {
-                          // 모집글 상세 화면으로 이동
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -99,6 +88,104 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
                             ),
                           ).then((_) => _loadRecruitments());
                         },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 카테고리 아이콘 + 텍스트
+                              Row(
+                                children: [
+                                  Icon(
+                                    recruitment['category'] == '공부'
+                                        ? Icons.school
+                                        : recruitment['category'] == '헬스'
+                                        ? Icons.fitness_center
+                                        : Icons.directions_run,
+                                    size: 18,
+                                    color: Colors.blueAccent,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    recruitment['category'],
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // 제목 + 그룹명 + 상태표시
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            recruitment['title'],
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          recruitment['recruitGroupName'],
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.blueGrey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color:
+                                          recruitment['recruitmentStatus'] ==
+                                                  '모집중'
+                                              ? Colors.green
+                                              : Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // 본문 미리보기
+                              Text(
+                                recruitment['content'],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              // 작성일
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: Text(
+                                  formattedDate,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   },
