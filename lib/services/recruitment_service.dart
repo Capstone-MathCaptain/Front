@@ -3,6 +3,9 @@ import 'api_helper.dart';
 import 'dart:developer';
 
 class RecruitmentService {
+  //* 모집글 목록 조회
+  //* GET /recruitment
+  //* 성공 시 모집글 목록 반환
   static Future<List<dynamic>> fetchRecruitments() async {
     try {
       final response = await ApiHelper.sendRequest(
@@ -24,6 +27,9 @@ class RecruitmentService {
     }
   }
 
+  //* 모집글 상세 조회
+  //* GET /recruitment/{recruitmentId}
+  //* 성공 시 모집글 상세 정보 반환
   static Future<Map<String, dynamic>> fetchDetailRecruitments(
     int recruitmentId,
   ) async {
@@ -48,40 +54,15 @@ class RecruitmentService {
     }
   }
 
-  //모집글 작성 요청
-  static Future<Map<String, dynamic>> requestCreateRecruitment() async {
-    try {
-      final response = await ApiHelper.sendRequest(
-        endpoint: "/recruitment/create",
-        method: "GET",
-      );
-      final decodedData = utf8.decode(response.bodyBytes);
-      final responseData = jsonDecode(decodedData);
-
-      if (response.statusCode == 200 && responseData["status"] == true) {
-        log("✅ 모집글 작성 요청 성공: ${responseData['data']}");
-        return responseData['data'];
-      } else {
-        log(
-          "❌ 모집글 작성 요청 실패: ${response.statusCode}, ${responseData['message']}",
-        );
-        throw Exception(responseData["message"] ?? "모집글 작성 요청 실패");
-      }
-    } catch (e) {
-      log("❌ 네트워크 오류: $e", error: e);
-      throw Exception("네트워크 오류 발생: $e");
-    }
-  }
-
-  // 모집글 작성
-  static Future<bool> createRecruitment({
-    required int recruitGroupId,
+  //* 모집글 작성
+  //* POST /recruitment/create
+  //* 성공 시 모집글 생성된 데이터 반환
+  static Future<Map<String, dynamic>> createRecruitment({
     required String title,
     required String content,
   }) async {
     try {
       final Map<String, dynamic> requestBody = {
-        "recruitGroupId": recruitGroupId,
         "title": title,
         "content": content,
       };
@@ -96,7 +77,7 @@ class RecruitmentService {
 
       if (response.statusCode == 200 && responseData["status"] == true) {
         log("✅ 모집글 생성 성공: ${responseData['data']}");
-        return true;
+        return responseData['data'];
       } else {
         log("❌ 모집글 생성 실패: ${response.statusCode}, ${responseData['message']}");
         throw Exception(responseData["message"] ?? "모집글 생성 실패");
@@ -107,10 +88,13 @@ class RecruitmentService {
     }
   }
 
+  //* 모집글 수정
+  //* PUT /recruitment/{recruitmentId}
+  //* 성공 시 수정된 모집글 데이터 반환
   static Future<bool> updateRecruitment({
     required int recruitmentId,
     required int authorId,
-    required String recruitGroupId,
+    required int recruitGroupId,
     required String title,
     required String content,
     required String recruitmentStatus,
@@ -147,6 +131,9 @@ class RecruitmentService {
     }
   }
 
+  //* 모집글 삭제
+  //* DELETE /recruitment/{recruitmentId}
+  //* 성공 시 삭제된 모집글 데이터 반환
   static Future<bool> deleteRecruitment({required int recruitmentId}) async {
     try {
       final response = await ApiHelper.sendRequest(
@@ -171,7 +158,9 @@ class RecruitmentService {
     }
   }
 
-  // 댓글 작성
+  //* 댓글 작성
+  //* POST /recruitment/comment/{recruitmentId}
+  //* 성공 시 작성된 댓글 데이터 반환
   static Future<bool> createComment({
     required int recruitmentId,
     required String content,
@@ -205,6 +194,9 @@ class RecruitmentService {
     }
   }
 
+  //* 댓글 수정
+  //* PUT /recruitment/comment/{recruitmentId}/{commentId}
+  //* 성공 시 수정된 댓글 데이터 반환
   static Future<bool> updateComment({
     required int recruitmentId,
     required int commentId,
@@ -240,6 +232,9 @@ class RecruitmentService {
     }
   }
 
+  //* 댓글 삭제
+  //* DELETE /recruitment/comment/{recruitmentId}/{commentId}
+  //* 성공 시 삭제된 댓글 데이터 반환
   static Future<bool> deleteComment({
     required int recruitmentId,
     required int commentId,

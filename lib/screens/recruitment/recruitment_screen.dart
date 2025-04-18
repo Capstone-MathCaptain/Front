@@ -18,13 +18,11 @@ class RecruitmentListScreen extends StatefulWidget {
 class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
   List<dynamic> recruitments = [];
   bool _isLoading = false;
-  bool canCreateRecruitment = false;
 
   @override
   void initState() {
     super.initState();
     _loadRecruitments();
-    _checkUserGroupLeader();
   }
 
   Future<void> _loadRecruitments() async {
@@ -44,62 +42,17 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
     }
   }
 
-  //현재 유저가 리더로 있는 그룹이 있는지 판별
-  Future<void> _checkUserGroupLeader() async {
-    try {
-      final response = await ApiHelper.sendRequest(
-        endpoint: "/user/mypage",
-        method: "GET",
-        includeToken: true,
-      );
-
-      if (response.statusCode == 200) {
-        final userInfo = jsonDecode(response.body)['data'];
-        final userName = userInfo['name'];
-        final userNickname = userInfo['nickname'];
-
-        final userGroups = await GroupService.fetchUserGroups();
-        for (var group in userGroups) {
-          if (group['leaderName'] == userName ||
-              group['leaderName'] == userNickname) {
-            setState(() {
-              canCreateRecruitment = true;
-            });
-            break;
-          }
-        }
-      } else {
-        log("사용자 정보를 불러오는데 실패했습니다.");
-      }
-    } catch (e) {
-      log("사용자 정보를 확인하는데 실패했습니다: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('모집글 목록')),
       floatingActionButton: FloatingActionButton(
-        onPressed:
-            canCreateRecruitment
-                ? () {
-                  // 모집글 생성 화면으로 이동
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RecruitmentCreateScreen(),
-                    ),
-                  ).then((_) => _loadRecruitments());
-                }
-                : () {
-                  // 모집글 작성 불가 메시지 표시
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('모집글을 작성할 수 있는 그룹이 없습니다. 먼저 그룹을 생성해주세요.'),
-                    ),
-                  );
-                },
+        onPressed: () async {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => RecruitmentCreateScreen()),
+          ).then((_) => _loadRecruitments());
+        },
         child: const Icon(Icons.add),
       ),
       body:

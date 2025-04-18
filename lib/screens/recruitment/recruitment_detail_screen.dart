@@ -19,12 +19,18 @@ class RecruitmentDetailScreen extends StatefulWidget {
 
 class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
   bool isLoading = true;
-  Map<String, dynamic> recruitmentDetail = {};
-  TextEditingController _commentController = TextEditingController();
-  TextEditingController _editCommentController = TextEditingController();
   bool isAuthor = false;
+
   String? userName;
   String? userNickname;
+  int? currentUserId;
+
+  Map<String, dynamic> recruitmentDetail = {};
+  //* 댓글 수정 필드
+  TextEditingController _commentController = TextEditingController();
+  TextEditingController _editCommentController = TextEditingController();
+
+  //* 모집글 수정 필드
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
@@ -36,9 +42,10 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     _commentController = TextEditingController();
     _editCommentController = TextEditingController();
 
-    // 메인 UI 빌드 후 데이터 로딩 시작
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchRecruitmentDetail();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      currentUserId = prefs.getInt('userId');
+      await _fetchRecruitmentDetail();
     });
   }
 
@@ -49,45 +56,23 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     super.dispose();
   }
 
+  //* 모집글 상세 정보 가져오기
   Future<void> _fetchRecruitmentDetail() async {
     try {
       final response = await RecruitmentService.fetchDetailRecruitments(
         widget.recruitmentId,
       );
       setState(() {
-        recruitmentDetail = response['data'];
+        recruitmentDetail = Map<String, dynamic>.from(response);
+        isAuthor = recruitmentDetail['author'] ?? false;
         isLoading = false;
       });
-      await _fetchUserInfo();
+      // await _fetchUserInfo();
     } catch (e) {
       log("모집글 정보를 불러오는데 실패했습니다: $e");
       setState(() {
         isLoading = false;
       });
-    }
-  }
-
-  Future<void> _fetchUserInfo() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt('userId');
-
-      if (userId == null) {
-        log("userId를 불러오는데 실패했습니다.");
-        return;
-      }
-
-      final userInfo = await UserService.getUserInfo(userId: userId);
-      userName = userInfo['name'];
-      userNickname = userInfo['nickname'];
-
-      setState(() {
-        isAuthor =
-            recruitmentDetail['authorName'] == userName ||
-            recruitmentDetail['authorName'] == userNickname;
-      });
-    } catch (e) {
-      log("작성자 확인 중 오류 발생: $e");
     }
   }
 
@@ -100,8 +85,8 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     try {
       final success = await RecruitmentService.updateRecruitment(
         recruitmentId: widget.recruitmentId,
-        authorId: recruitmentDetail['authorId'],
-        recruitGroupId: recruitmentDetail['recruitGroupId'],
+        authorId: recruitmentDetail['authorId'] ?? 0,
+        recruitGroupId: recruitmentDetail['recruitGroupId'] ?? 0,
         title: title,
         content: content,
         recruitmentStatus: recruitmentStatus,
@@ -375,6 +360,18 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String _normalizeStatus(String? status) {
+    switch (status) {
+      case '모집중':
+        return 'RECRUITING';
+      case '모집 완료':
+      case '모집완료':
+        return 'COMPLETED';
+      default:
+        return status?.toUpperCase() ?? '';
+    }
+  }
+
   String _formatDate(String? dateString) {
     if (dateString == null) return '';
 
@@ -424,7 +421,7 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                recruitmentDetail['title'] ?? '제목 없음',
+                                '${recruitmentDetail['title']}',
                                 style: Theme.of(context).textTheme.headlineSmall
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -448,7 +445,7 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '그룹명: ${recruitmentDetail['recruitGroupName'] ?? '그룹명 없음'}',
+                                    '그룹명: ${recruitmentDetail['recruitGroupName']?.toString() ?? '그룹명 없음'}',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey,
@@ -477,7 +474,9 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                                   height: 12,
                                   decoration: BoxDecoration(
                                     color: _getRecruitmentStatusColor(
-                                      recruitmentDetail['recruitmentStatus'],
+                                      _normalizeStatus(
+                                        recruitmentDetail['recruitmentStatus'],
+                                      ),
                                     ),
                                     shape: BoxShape.circle,
                                   ),
@@ -485,12 +484,16 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                                 const SizedBox(width: 4),
                                 Text(
                                   _getRecruitmentStatusText(
-                                    recruitmentDetail['recruitmentStatus'],
+                                    _normalizeStatus(
+                                      recruitmentDetail['recruitmentStatus'],
+                                    ),
                                   ),
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: _getRecruitmentStatusColor(
-                                      recruitmentDetail['recruitmentStatus'],
+                                      _normalizeStatus(
+                                        recruitmentDetail['recruitmentStatus'],
+                                      ),
                                     ),
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -618,12 +621,15 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                         itemBuilder: (context, index) {
                           final comment =
                               (recruitmentDetail['comments'] as List)[index];
-                          final commentAuthor =
-                              comment['authorName'] ?? '알 수 없음';
+                          final int? commentAuthorId = comment['authorId'];
                           final isCommentAuthor =
-                              (userName != null && commentAuthor == userName) ||
-                              (userNickname != null &&
-                                  commentAuthor == userNickname);
+                              (currentUserId != null &&
+                                  commentAuthorId == currentUserId);
+                          final commentAuthor =
+                              comment['authorName'] ?? '작성자 없음';
+                          // (userName != null && commentAuthorId == user) ||
+                          // (userNickname != null &&
+                          //     commentAuthor == userNickname);
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -664,11 +670,10 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                                               const SizedBox(width: 8),
                                               InkWell(
                                                 onTap:
-                                                    () =>
-                                                        _showEditCommentDialog(
-                                                          comment['commentId'],
-                                                          comment['content'],
-                                                        ),
+                                                    () => _showEditCommentDialog(
+                                                      comment['commentId'] ?? 0,
+                                                      comment['content'] ?? "",
+                                                    ),
                                                 child: const Icon(
                                                   Icons.edit,
                                                   size: 16,
@@ -679,7 +684,8 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
                                                 onTap:
                                                     () =>
                                                         _showDeleteCommentDialog(
-                                                          comment['commentId'],
+                                                          comment['commentId'] ??
+                                                              0,
                                                         ),
                                                 child: const Icon(
                                                   Icons.delete,
@@ -752,16 +758,12 @@ class _RecruitmentDetailScreenState extends State<RecruitmentDetailScreen> {
     final newStatus =
         currentStatus == 'RECRUITING' ? 'COMPLETED' : 'RECRUITING';
 
-    if (recruitmentDetail['authorId'] == null) {
-      _showSnackBar("작성자 정보가 없습니다. 잠시 후 다시 시도해주세요.");
-      return;
-    }
     try {
       // 모집 상태 변경 API 호출
       await RecruitmentService.updateRecruitment(
         recruitmentId: widget.recruitmentId,
-        authorId: recruitmentDetail['authorId'] ?? 0,
-        recruitGroupId: recruitmentDetail['recruitGroupId'] ?? 0,
+        authorId: recruitmentDetail['authorId'],
+        recruitGroupId: recruitmentDetail['recruitGroupId'],
         title: recruitmentDetail['title'] ?? '수정할 제목을 입력하시요.',
         content: recruitmentDetail['content'] ?? '수정할 내용을 입력하시요.',
         recruitmentStatus: newStatus == 'RECRUITING' ? '모집중' : '모집 완료',
