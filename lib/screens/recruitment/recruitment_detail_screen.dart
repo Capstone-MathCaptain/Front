@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:developer';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:capstone/services/recruitment_service.dart';
-import 'package:capstone/services/user_service.dart';
 import 'package:intl/intl.dart';
 
 class RecruitmentDetailScreen extends StatefulWidget {

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:capstone/screens/user/personal_card_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone/services/record_service.dart';
 import 'package:capstone/screens/user/personal_card_overlay.dart';

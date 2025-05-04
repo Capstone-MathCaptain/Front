@@ -21,8 +21,9 @@ class _RankingScreenState extends State<RankingScreen> {
 
   Future<void> loadRanking(int page) async {
     if (page < 1 ||
-        (rankingData != null && page > rankingData!.pageInfo.totalPages))
+        (rankingData != null && page > rankingData!.pageInfo.totalPages)) {
       return;
+    }
 
     setState(() => isLoading = true);
 

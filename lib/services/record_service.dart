@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'package:capstone/services/api_helper.dart';
 
 class RecordService {
