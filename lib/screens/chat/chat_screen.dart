@@ -17,8 +17,36 @@ class _ChatMessage {
   final String text;
   final bool isUser;
   final DateTime time;
+  final bool isLoading;
+  final String? messageId;
 
-  _ChatMessage({required this.text, required this.isUser, required this.time});
+  _ChatMessage({
+    required this.text,
+    required this.isUser,
+    required this.time,
+    this.isLoading = false,
+    this.messageId,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is _ChatMessage &&
+        other.text == text &&
+        other.isUser == isUser &&
+        other.time == time &&
+        other.isLoading == isLoading &&
+        other.messageId == messageId;
+  }
+
+  @override
+  int get hashCode =>
+      text.hashCode ^
+      isUser.hashCode ^
+      time.hashCode ^
+      isLoading.hashCode ^
+      (messageId?.hashCode ?? 0);
 }
 
 class _ChatScreenState extends State<ChatScreen>
@@ -51,19 +79,30 @@ class _ChatScreenState extends State<ChatScreen>
         userId: _userId!,
         onMessage: (frame) {
           final data = jsonDecode(frame.body!);
+          // Ignore messages sent by this user to prevent duplicates
+          if (data['role'] == 'USER') {
+            return;
+          }
+          // Remove any existing loading placeholder immediately
           setState(() {
-            _messages.add(
-              _ChatMessage(
-                text: data['message'] ?? '',
-                isUser: data['role'] == 'USER',
-                time:
-                    data['sendTime'] != null
-                        ? DateTime.tryParse(data['sendTime']) ?? DateTime.now()
-                        : DateTime.now(),
-              ),
-            );
+            _messages.removeWhere((msg) => msg.isLoading);
           });
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+
+          final newMessage = _ChatMessage(
+            text: data['message'] ?? '',
+            isUser: false,
+            time:
+                data['sendTime'] != null
+                    ? DateTime.tryParse(data['sendTime']) ?? DateTime.now()
+                    : DateTime.now(),
+            messageId: data['messageId'],
+          );
+
+          // Add the actual response message
+          setState(() {
+            _messages.add(newMessage);
+          });
+          _scrollToBottom();
         },
       );
     }
@@ -94,17 +133,24 @@ class _ChatScreenState extends State<ChatScreen>
                     time:
                         DateTime.tryParse(item['sendTime'] ?? '') ??
                         DateTime.now(),
+                    messageId: item['messageId'],
                   ),
+                )
+                .where(
+                  (newMsg) =>
+                      !_messages.any(
+                        (msg) =>
+                            msg.text == newMsg.text && msg.time == newMsg.time,
+                      ),
                 )
                 .toList();
 
-        setState(() {
-          _messages.addAll(history);
-        });
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-        });
+        if (history.isNotEmpty) {
+          setState(() {
+            _messages.addAll(history);
+          });
+          _scrollToBottom();
+        }
       }
     } catch (e) {
       debugPrint('❌ 채팅 기록 불러오기 실패: $e');
@@ -114,10 +160,48 @@ class _ChatScreenState extends State<ChatScreen>
   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-
-    ChatService.sendChatMessage(text);
-    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
     _controller.clear();
+
+    final now = DateTime.now();
+    final messageId = now.millisecondsSinceEpoch.toString();
+
+    // ✅ prevent same messageId from being sent twice
+    final isDuplicate = _messages.any((msg) => msg.messageId == messageId);
+    if (isDuplicate) return;
+
+    setState(() {
+      _messages.addAll([
+        _ChatMessage(text: text, isUser: true, time: now, messageId: messageId),
+        _ChatMessage(
+          text: '답변 생성 중...',
+          isUser: false,
+          time: now,
+          isLoading: true,
+          messageId: '${messageId}_loading',
+        ),
+      ]);
+    });
+
+    _scrollToBottom();
+
+    ChatService.sendChatMessage(text, messageId: messageId);
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
   }
 
   @override
@@ -133,7 +217,7 @@ class _ChatScreenState extends State<ChatScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("채팅"),
+        title: const Text("도우미 챗봇"),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
@@ -141,59 +225,110 @@ class _ChatScreenState extends State<ChatScreen>
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
+            child: Scrollbar(
               controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              itemCount: _messages.length,
-              reverse: false,
-              shrinkWrap: false,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return Align(
-                  alignment:
-                      message.isUser
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 6,
-                      horizontal: 8,
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: message.isUser ? Colors.yellow[100] : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+              thumbVisibility: true,
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                itemCount: _messages.length,
+                reverse: false,
+                shrinkWrap: false,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  if (message.isLoading) {
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 8,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                          message.isUser
-                              ? CrossAxisAlignment.end
-                              : CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          message.text,
-                          style: const TextStyle(fontSize: 15, height: 1.3),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "${message.time.hour.toString().padLeft(2, '0')}:${message.time.minute.toString().padLeft(2, '0')}",
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 8),
+                            Text("답변 생성 중...", style: TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return Align(
+                    alignment:
+                        message.isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 8,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color:
+                            message.isUser
+                                ? Colors.yellow[50]
+                                : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                message.isUser
+                                    ? Colors.black.withOpacity(0.10)
+                                    : Colors.black.withOpacity(0.15),
+                            blurRadius: message.isUser ? 6 : 8,
+                            offset:
+                                message.isUser
+                                    ? const Offset(0, 3)
+                                    : const Offset(0, 4),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment:
+                            message.isUser
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            message.text,
+                            style: const TextStyle(fontSize: 15, height: 1.3),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "${message.time.hour.toString().padLeft(2, '0')}:${message.time.minute.toString().padLeft(2, '0')}",
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
           const Divider(height: 1),

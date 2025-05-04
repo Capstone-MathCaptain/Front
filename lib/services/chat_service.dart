@@ -37,7 +37,10 @@ class ChatService {
     stompClient.activate();
   }
 
-  static Future<void> sendChatMessage(String message) async {
+  static Future<void> sendChatMessage(
+    String message, {
+    required String messageId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('userId');
 
@@ -46,9 +49,17 @@ class ChatService {
       return;
     }
 
-    final payload = json.encode({'userId': userId, 'message': message});
+    final payload = json.encode({
+      'userId': userId,
+      'message': message,
+      'messageId': messageId,
+    });
 
-    stompClient.send(destination: '/send/chat.send', body: payload);
+    if (stompClient.connected) {
+      stompClient.send(destination: '/send/chat.send', body: payload);
+    } else {
+      log("❌ STOMP 클라이언트가 연결되지 않음: 메시지 전송 실패");
+    }
   }
 
   static void subscribeToUserChannel({
