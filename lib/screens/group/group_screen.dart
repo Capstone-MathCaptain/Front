@@ -2,7 +2,6 @@ import 'package:capstone/screens/group/group_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone/screens/group/group_create_screen.dart';
 import 'package:capstone/services/group_service.dart';
-import 'dart:developer';
 
 class GroupPage extends StatefulWidget {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey;
@@ -280,6 +279,7 @@ class GroupPageState extends State<GroupPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(179, 245, 245, 245),
       appBar: AppBar(title: const Text("내 그룹")),
       body:
           _isLoading
@@ -332,6 +332,22 @@ class GroupPageState extends State<GroupPage>
             ),
             const SizedBox(height: 24), // ✅ X 버튼과는 더 넉넉히!
           ],
+          FloatingActionButton(
+            heroTag: "chat_fab",
+            backgroundColor: const Color(0xFFFFF176),
+            onPressed: () {
+              Navigator.pushNamed(context, '/chat');
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Colors.yellow),
+            ),
+            child: const Icon(
+              Icons.chat_bubble_outline,
+              color: Colors.orangeAccent,
+            ),
+          ),
+          const SizedBox(height: 18),
           FloatingActionButton(
             heroTag: "main_fab",
             backgroundColor: const Color(0xFFE0F2F1),

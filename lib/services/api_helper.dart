@@ -8,7 +8,7 @@ class ApiHelper {
   static const String refreshUrl = "$baseUrl/refresh-token"; // 액세스 토큰 갱신 엔드포인트
 
   /// ✅ 액세스 토큰 가져오기
-  static Future<String?> _getAccessToken() async {
+  static Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString("access_token");
   }
@@ -21,7 +21,7 @@ class ApiHelper {
     bool includeToken = true,
   }) async {
     log('🔄 API 요청 시작: $method $endpoint');
-    String? accessToken = includeToken ? await _getAccessToken() : null;
+    String? accessToken = includeToken ? await getAccessToken() : null;
 
     final uri = Uri.parse('$baseUrl$endpoint');
     var headers = {

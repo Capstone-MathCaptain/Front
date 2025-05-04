@@ -1,10 +1,12 @@
 import 'package:capstone/screens/user/login_screen.dart';
 import 'package:capstone/screens/home_screen.dart';
+import 'package:capstone/screens/chat/chat_screen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:developer'; // ✅ 로그를 보기 위한 import
+import 'package:capstone/screens/notification_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +33,10 @@ class MyApp extends StatelessWidget {
       title: "Capstone",
       theme: ThemeData(primaryColor: Colors.blue),
       home: const SplashScreen(),
+      routes: {
+        '/notifications': (context) => const NotificationListScreen(),
+        '/chat': (context) => const ChatScreen(), // ✅ ChatScreen 경로 추가
+      },
     );
   }
 }
