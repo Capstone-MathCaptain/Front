@@ -4,6 +4,7 @@ import 'package:capstone/screens/ranking/ranking_screen.dart';
 import 'package:capstone/screens/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone/services/notification_icon.dart'; // ✅ 알림 아이콘 import
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,14 +16,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
-  final GlobalKey<GroupPageState> _groupPageKey = GlobalKey<GroupPageState>();
 
   int _selectedIndex = 0;
 
   void _onItemTapped(int index) {
-    if (_selectedIndex == index && index == 0) {
-      _groupPageKey.currentState?.fetchUserGroups();
-    }
     setState(() {
       _selectedIndex = index;
     });
@@ -33,10 +30,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Scaffold(
-        backgroundColor: const Color.fromARGB(241, 250, 250, 250),
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          title: const Text('의지박약'),
-          backgroundColor: const Color.fromARGB(241, 250, 250, 250),
+          title: Text(
+            '의지박약',
+            style: GoogleFonts.notoSans(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          backgroundColor: Colors.white,
           elevation: 0,
           actions: const [
             NotificationIcon(), // ✅ 종 아이콘
@@ -45,19 +49,23 @@ class _HomeScreenState extends State<HomeScreen> {
         body: IndexedStack(
           index: _selectedIndex,
           children: [
-            GroupPage(
-              key: _groupPageKey,
-              scaffoldMessengerKey: _scaffoldMessengerKey,
-            ),
+            GroupPage(scaffoldMessengerKey: _scaffoldMessengerKey),
             const RankingScreen(),
             const RecruitmentListScreen(),
             const ProfileScreen(),
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: const Color.fromARGB(241, 250, 250, 250),
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          backgroundColor: Colors.white,
           selectedItemColor: Colors.blueAccent,
           unselectedItemColor: Colors.grey,
+          selectedLabelStyle: GoogleFonts.notoSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          unselectedLabelStyle: GoogleFonts.notoSans(fontSize: 12),
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
           items: const [

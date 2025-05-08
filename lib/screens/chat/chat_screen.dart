@@ -217,7 +217,7 @@ class _ChatScreenState extends State<ChatScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("도우미 챗봇"),
+        title: const Text("도우미 챗봇 🤖"),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,

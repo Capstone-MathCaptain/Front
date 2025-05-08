@@ -3,6 +3,9 @@ import 'dart:developer';
 import 'package:capstone/services/group_service.dart';
 import 'package:capstone/screens/group/record_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:capstone/services/group_join_service.dart';
+import 'package:capstone/services/group_join_service.dart'
+    show GroupJoinRequest;
 
 class GroupDetailPage extends StatefulWidget {
   final int groupId;
@@ -518,6 +521,72 @@ class GroupDetailPageState extends State<GroupDetailPage>
 
                                   // 그룹 프로필 카드
                                   _buildGroupProfileCard(groupData),
+
+                                  const SizedBox(height: 16),
+                                  if (groupData['isMember'] ==
+                                      false) // 가입되지 않은 경우
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        try {
+                                          final success =
+                                              await GroupJoinService.joinGroup(
+                                                groupId: widget.groupId,
+                                                request: GroupJoinRequest(
+                                                  personalDailyGoal: 0,
+                                                  personalWeeklyGoal: 0,
+                                                ),
+                                              );
+                                          if (success && mounted) {
+                                            setState(() {
+                                              _isMemberListVisible = false;
+                                              // reload members
+                                              _groupMembers =
+                                                  _loadGroupMembers();
+                                            });
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  '그룹 가입 요청이 완료되었습니다',
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '가입 요청 중 오류 발생: $e',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF06D5CD,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                          horizontal: 20,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        '가입하기',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
 
                                   const Spacer(),
 

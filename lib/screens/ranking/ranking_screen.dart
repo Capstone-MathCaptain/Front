@@ -57,7 +57,7 @@ class _RankingScreenState extends State<RankingScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FB),
       appBar: AppBar(
-        title: const Text('🏆 그룹 랭킹'),
+        title: const Text('그룹 랭킹 🏆'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -111,8 +111,15 @@ class _RankingScreenState extends State<RankingScreen> {
       children: [
         CircleAvatar(
           radius: size / 2,
-          backgroundColor: Colors.grey.shade300,
-          child: Icon(Icons.group, size: size * 0.6, color: Colors.black54),
+          backgroundColor: Colors.white,
+          // add a subtle shadow around the podium avatars
+          child: Material(
+            shape: const CircleBorder(),
+            elevation: 0,
+            shadowColor: Colors.grey.shade300,
+            color: Colors.transparent,
+            child: Icon(Icons.group, size: size * 0.6, color: Colors.black54),
+          ),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -151,11 +158,13 @@ class _RankingScreenState extends State<RankingScreen> {
       itemBuilder: (context, index) {
         final item = others[index];
         return Card(
+          color: Colors.white, // white background
+          elevation: 4, // raised shadow
+          shadowColor: Colors.grey.shade300, // light grey shadow
           margin: const EdgeInsets.symmetric(vertical: 6),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 1,
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: Colors.blue.shade100,

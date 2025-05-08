@@ -138,14 +138,14 @@ class GroupService {
   }
 
   /// ✅ 그룹 찾기 API 요청 (아직 구현되지 않음)
-  static Future<List<dynamic>> searchGroups({required String query}) async {
-    log("🔍 그룹 검색 요청: $query");
+  static Future<List<dynamic>> searchGroups({required String groupName}) async {
+    log("🔍 그룹 검색 요청: $groupName");
 
     try {
       final response = await ApiHelper.sendRequest(
         endpoint: "/group/search",
         method: "GET",
-        body: {"query": query},
+        body: {"groupName": groupName},
       );
 
       final decodedData = utf8.decode(response.bodyBytes);
@@ -160,6 +160,27 @@ class GroupService {
     } catch (e) {
       log("❌ 네트워크 오류: $e", error: e);
       throw Exception("네트워크 오류 발생: $e");
+    }
+  }
+
+  /// ✅ 전체 또는 카테고리별 그룹 목록 불러오기
+  static Future<List<dynamic>> fetchGroups({String? category}) async {
+    final endpoint =
+        category == null
+            ? '/group/total'
+            : '/group/total?category=${category.toUpperCase()}';
+    final response = await ApiHelper.sendRequest(
+      endpoint: endpoint,
+      method: 'GET',
+    );
+    final decodedData = utf8.decode(response.bodyBytes);
+    if (response.statusCode == 200) {
+      final List<dynamic> responseData = jsonDecode(decodedData)['data'];
+      log("✅ ${category ?? 'ALL'} 그룹 조회 성공: ${responseData.length}개 그룹");
+      return responseData;
+    } else {
+      log("❌ 그룹 조회 실패: ${response.statusCode}");
+      throw Exception("그룹 정보를 불러오지 못했습니다.");
     }
   }
 }

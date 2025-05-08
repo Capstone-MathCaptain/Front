@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:capstone/services/record_service.dart';
+import 'package:capstone/services/group_service.dart';
+import 'package:capstone/screens/group/memo_screen.dart';
 import 'package:capstone/screens/user/personal_card_overlay.dart';
 
 class RecordScreen extends StatefulWidget {
@@ -12,67 +14,101 @@ class RecordScreen extends StatefulWidget {
   State<RecordScreen> createState() => _RecordScreenState();
 }
 
-class _RecordScreenState extends State<RecordScreen> {
+class _RecordScreenState extends State<RecordScreen>
+    with SingleTickerProviderStateMixin {
   int _seconds = 0;
   Timer? _timer;
   bool _isRunning = false;
+  bool _isLoading = false;
   DateTime? _startTime;
   DateTime? _endTime;
 
   void _startTimer() {
-    if (_isRunning) return;
+    if (_isRunning || _isLoading) return;
     _startTime = DateTime.now();
     _isRunning = true;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _seconds++;
-      });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() => _seconds++);
     });
   }
 
   void _pauseTimer() {
+    if (_isLoading) return;
     _timer?.cancel();
     _isRunning = false;
   }
 
   Future<void> _completeTimer() async {
+    if (_isLoading) return;
     _pauseTimer();
     _endTime = DateTime.now();
-    int minutes = _seconds ~/ 60; // 초 -> 분
-    final responseData = await RecordService.sendRecordTime(
-      widget.groupId,
-      minutes,
-      _startTime!.toIso8601String(),
-      _endTime!.toIso8601String(),
-    );
-    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-    // 성공적으로 응답을 받으면 타이머 초기화
-    setState(() {
-      _seconds = 0;
-      _startTime = null;
-      _endTime = null;
-    });
+    final minutes = _seconds ~/ 60;
+    try {
+      // 1) 그룹 카테고리 조회
+      final groupDetails = await GroupService.fetchGroupDetails(widget.groupId);
+      if (!mounted) return;
+      final category = groupDetails['category'] as String? ?? '';
 
-    if (responseData != null) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        barrierColor: Colors.transparent, // 배경을 어둡게
-        builder:
-            (context) => PersonalCardOverlay(
-              durationInMinutes: responseData['durationInMinutes'],
-              remainingDailyGoalMinutes:
-                  responseData['remainingDailyGoalMinutes'],
-              remainingWeeklyGoalDays: responseData['remainingWeeklyGoalDays'],
-              personalDailyGoal: responseData['personalDailyGoal'],
-              personalWeeklyGoal: responseData['personalWeeklyGoal'],
-            ),
-      );
-    } else {
-      ScaffoldMessenger.of(
+      // 2) 메모 화면으로 이동
+      final responseData = await Navigator.push<Map<String, dynamic>?>(
         context,
-      ).showSnackBar(const SnackBar(content: Text('기록 저장에 실패하였습니다')));
+        MaterialPageRoute(
+          builder:
+              (_) => MemoScreen(
+                groupId: widget.groupId,
+                category: category,
+                startTime: _startTime!.toIso8601String(),
+                endTime: _endTime!.toIso8601String(),
+                activityTimeMinutes: minutes,
+              ),
+        ),
+      );
+      if (!mounted) return;
+
+      // 3) 타이머 및 상태 초기화
+      setState(() {
+        _seconds = 0;
+        _startTime = null;
+        _endTime = null;
+      });
+
+      // 4) 결과에 따른 행동
+      if (responseData != null) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.transparent,
+          builder:
+              (_) => PersonalCardOverlay(
+                durationInMinutes:
+                    responseData['durationInMinutes'] as int? ?? 0,
+                remainingDailyGoalMinutes:
+                    responseData['remainingDailyGoalMinutes'] as int? ?? 0,
+                remainingWeeklyGoalDays:
+                    responseData['remainingWeeklyGoalDays'] as int? ?? 0,
+                personalDailyGoal:
+                    responseData['personalDailyGoal'] as int? ?? 0,
+                personalWeeklyGoal:
+                    responseData['personalWeeklyGoal'] as int? ?? 0,
+              ),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('기록 저장에 실패하였습니다')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('오류가 발생했습니다: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -92,35 +128,80 @@ class _RecordScreenState extends State<RecordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('기록')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _formatTime(_seconds),
-              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(onPressed: _startTimer, child: const Text('시작')),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: _pauseTimer,
-                  child: const Text('일시정지'),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: _completeTimer,
-                  child: const Text('완료'),
-                ),
-              ],
-            ),
-          ],
-        ),
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        title: const Text('기록', style: TextStyle(color: Colors.black87)),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
+      body: Stack(
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(_seconds),
+                    style: const TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildActionButton('시작', _startTimer),
+                      const SizedBox(width: 12),
+                      _buildActionButton('일시정지', _pauseTimer),
+                      const SizedBox(width: 12),
+                      _buildActionButton('완료', _completeTimer),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black38,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(String label, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFE3F2FD),
+        foregroundColor: const Color(0xFF1976D2),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Color(0xFF1976D2)),
+        ),
+        elevation: 0,
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }

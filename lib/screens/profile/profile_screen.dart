@@ -39,16 +39,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 로딩 중에는 로딩 인디케이터
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
+    // 프로필 데이터 없으면 메시지
     if (profileData == null) {
-      return const Center(child: Text("데이터를 불러올 수 없습니다."));
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: Text("데이터를 불러올 수 없습니다.")),
+      );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('프로필')),
+      // 배경을 흰색으로
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        // AppBar 배경을 흰색, 글자/아이콘은 검은색으로
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        title: const Text('마이 페이지 👤', style: TextStyle(color: Colors.black)),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -112,7 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onPressed: () {
             // 설정 화면 이동 등
           },
-          icon: const Icon(Icons.settings),
+          icon: const Icon(Icons.settings, color: Colors.black54),
         ),
       ],
     );
@@ -151,7 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white, // 카드 배경을 흰색으로
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -253,7 +269,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
                     // 목표 정보
                     Row(
                       children: [
@@ -285,7 +300,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-
                     // 달성 점수 시각화
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
