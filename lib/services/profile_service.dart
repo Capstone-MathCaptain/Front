@@ -12,7 +12,7 @@ class ProfileService {
       if (response.statusCode == 200) {
         final decoded = utf8.decode(response.bodyBytes); // ⭐ 인코딩 처리
         final Map<String, dynamic> responseData = jsonDecode(decoded)['data'];
-        log("✅ 프로필 조회 성공");
+        log("✅ 프로필 조회 성공!");
         return responseData;
       } else if (response.statusCode == 400) {
         throw Exception("오류 처리: ${jsonDecode(response.body)['message']}");
