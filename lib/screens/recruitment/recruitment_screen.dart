@@ -137,7 +137,7 @@ class _RecruitmentListScreenState extends State<RecruitmentListScreen> {
 
                                 const SizedBox(height: 8),
 
-                                // 제목 + 그룹명 + 상태표시
+                                // 제목 + 그룹명 + 상태표시 !
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
