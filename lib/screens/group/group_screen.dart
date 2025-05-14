@@ -1,4 +1,5 @@
 import 'package:capstone/screens/group/group_detail_screen.dart';
+import 'package:capstone/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone/screens/group/group_create_screen.dart';
 import 'package:capstone/services/group_service.dart';
@@ -7,8 +8,15 @@ import 'package:capstone/services/group_join_service.dart';
 
 class GroupPage extends StatefulWidget {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey;
+  final String? joinSuccessMessage;
+  final String? joinFailureMessage;
 
-  const GroupPage({super.key, required this.scaffoldMessengerKey});
+  const GroupPage({
+    super.key,
+    required this.scaffoldMessengerKey,
+    this.joinSuccessMessage,
+    this.joinFailureMessage,
+  });
 
   @override
   GroupPageState createState() => GroupPageState();
@@ -31,6 +39,19 @@ class GroupPageState extends State<GroupPage>
       duration: const Duration(milliseconds: 250),
       vsync: this,
     );
+    if (widget.joinSuccessMessage != null &&
+        widget.joinSuccessMessage!.isNotEmpty) {
+      // 위젯이 빌드된 후에 snackbar를 보여주기 위해 addPostFrameCallback 사용
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar(widget.joinSuccessMessage!);
+      });
+    }
+    if (widget.joinFailureMessage != null &&
+        widget.joinFailureMessage!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar(widget.joinFailureMessage!);
+      });
+    }
   }
 
   @override
@@ -624,7 +645,6 @@ class SearchOverlayState extends State<SearchOverlay> {
                                           ),
                                           ElevatedButton(
                                             onPressed: () async {
-                                              Navigator.pop(context);
                                               try {
                                                 bool success =
                                                     await GroupJoinService
@@ -638,24 +658,39 @@ class SearchOverlayState extends State<SearchOverlay> {
                                                         selectedWeekly,
                                                   ),
                                                 );
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      '가입 요청을 전송했습니다',
+                                                if (!mounted) return;
+                                                Navigator.pop(
+                                                    context); // 가입 후 모달 닫기
+                                                if (success) {
+                                                  Navigator.pushAndRemoveUntil(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          const HomeScreen(),
                                                     ),
-                                                  ),
-                                                );
+                                                    (route) => false,
+                                                  );
+                                                } else {
+                                                  Navigator.pushAndRemoveUntil(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          const HomeScreen(),
+                                                    ),
+                                                    (route) => false,
+                                                  );
+                                                }
                                               } catch (e) {
-                                                ScaffoldMessenger.of(
+                                                if (!mounted) return;
+                                                Navigator.pop(
+                                                    context); // 실패 시에도 모달 닫기
+                                                Navigator.pushAndRemoveUntil(
                                                   context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(
-                                                      '가입 요청 실패: $e',
-                                                    ),
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        const HomeScreen(),
                                                   ),
+                                                  (route) => false,
                                                 );
                                               }
                                             },
